@@ -17,29 +17,25 @@
 #include "object/level_time.hpp"
 
 #include <algorithm>
-#include <math.h>
 
 #include "editor/editor.hpp"
 #include "object/player.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/resources.hpp"
 #include "supertux/sector.hpp"
-#include "util/log.hpp"
 #include "util/reader_mapping.hpp"
 #include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 /** When to alert player they're low on time! */
 static const float TIME_WARNING = 20;
 
 LevelTime::LevelTime(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<LevelTime, scripting::LevelTime>(this),
   time_surface(Surface::create("images/engine/hud/time-0.png")),
   running(!Editor::is_active()),
   time_left()
 {
-  reader.get("name", name, "");
   reader.get("time", time_left, 0);
   if(time_left <= 0 && !Editor::is_active()) {
     log_warning << "No or invalid leveltime specified." << std::endl;
@@ -61,7 +57,7 @@ LevelTime::update(float elapsed_time)
 {
   if (!running) return;
 
-  int prev_time = (int) floor(time_left*5);
+  int prev_time = static_cast<int>(floorf(time_left*5));
   time_left -= elapsed_time;
   if(time_left <= 0) {
     if(time_left <= -5 || !Sector::current()->player->get_coins())
@@ -69,7 +65,7 @@ LevelTime::update(float elapsed_time)
       Sector::current()->player->kill(true);
       stop();
     }
-    if(prev_time != (int) floor(time_left*5))
+    if(prev_time != static_cast<int>(floorf(time_left*5)))
     {
       Sector::current()->player->add_coins(-1);
     }
@@ -89,11 +85,15 @@ LevelTime::draw(DrawingContext& context)
 
     if (time_surface)
     {
-      float all_width = time_surface->get_width() + Resources::normal_font->get_text_width(time_text);
-      context.draw_surface(time_surface, Vector((SCREEN_WIDTH - all_width)/2, BORDER_Y + 1), LAYER_FOREGROUND1);
-      context.draw_text(Resources::normal_font, time_text,
-                        Vector((SCREEN_WIDTH - all_width)/2 + time_surface->get_width(), BORDER_Y),
-                        ALIGN_LEFT, LAYER_FOREGROUND1, LevelTime::text_color);
+      float all_width = static_cast<float>(time_surface->get_width()) + Resources::normal_font->get_text_width(time_text);
+      context.color().draw_surface(time_surface,
+                                   Vector((static_cast<float>(context.get_width()) - all_width) / 2.0f,
+                                          BORDER_Y + 1),
+                                   LAYER_FOREGROUND1);
+      context.color().draw_text(Resources::normal_font, time_text,
+                                Vector((static_cast<float>(context.get_width()) - all_width) / 2.0f + static_cast<float>(time_surface->get_width()),
+                                       BORDER_Y),
+                                ALIGN_LEFT, LAYER_FOREGROUND1, LevelTime::text_color);
     }
   }
 
@@ -121,7 +121,7 @@ LevelTime::get_time() const
 void
 LevelTime::set_time(float time_left_)
 {
-  this->time_left = std::min(std::max(time_left_, 0.0f), 999.0f);
+  time_left = std::min(std::max(time_left_, 0.0f), 999.0f);
 }
 
 /* EOF */

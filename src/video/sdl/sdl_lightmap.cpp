@@ -14,37 +14,26 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
-
 #include "video/sdl/sdl_lightmap.hpp"
-#include "video/sdl/sdl_surface_data.hpp"
-#include "video/sdl/sdl_texture.hpp"
+
+#include "supertux/globals.hpp"
+#include "util/log.hpp"
+#include "video/drawing_request.hpp"
 #include "video/sdl/sdl_renderer.hpp"
 #include "video/sdl/sdl_painter.hpp"
+#include "video/sdl/sdl_video_system.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
-SDLLightmap::SDLLightmap() :
-  m_renderer(static_cast<SDLRenderer&>(VideoSystem::current()->get_renderer()).get_sdl_renderer()),
+SDLLightmap::SDLLightmap(SDLVideoSystem& video_system, SDL_Renderer* renderer) :
+  m_video_system(video_system),
+  m_renderer(renderer),
+  m_painter(m_video_system, m_renderer),
   m_texture(),
-  m_width(),
-  m_height(),
-  m_LIGHTMAP_DIV()
+  m_LIGHTMAP_DIV(),
+  m_cliprect()
 {
   m_LIGHTMAP_DIV = 5;
-
-  m_width = SCREEN_WIDTH;
-  m_height = SCREEN_HEIGHT;
-
-  m_texture = SDL_CreateTexture(m_renderer,
-                                SDL_PIXELFORMAT_RGB888,
-                                SDL_TEXTUREACCESS_TARGET,
-                                m_width / m_LIGHTMAP_DIV,
-                                m_height / m_LIGHTMAP_DIV);
-  if (!m_texture)
-  {
-    std::stringstream msg;
-    msg << "Couldn't create lightmap texture: " << SDL_GetError();
-    throw std::runtime_error(msg.str());
-  }
 }
 
 SDLLightmap::~SDLLightmap()
@@ -53,17 +42,29 @@ SDLLightmap::~SDLLightmap()
 }
 
 void
-SDLLightmap::start_draw(const Color &ambient_color)
+SDLLightmap::start_draw()
 {
+  if (!m_texture)
+  {
+    const Viewport& viewport = m_video_system.get_viewport();
+
+    m_texture = SDL_CreateTexture(m_renderer,
+                                  SDL_PIXELFORMAT_RGB888,
+                                  SDL_TEXTUREACCESS_TARGET,
+                                  viewport.get_screen_width() / m_LIGHTMAP_DIV,
+                                  viewport.get_screen_height() / m_LIGHTMAP_DIV);
+    if (!m_texture)
+    {
+      std::stringstream msg;
+      msg << "Couldn't create lightmap texture: " << SDL_GetError();
+      throw std::runtime_error(msg.str());
+    }
+  }
+
   SDL_SetRenderTarget(m_renderer, m_texture);
-
-  Uint8 r = static_cast<Uint8>(ambient_color.red * 255);
-  Uint8 g = static_cast<Uint8>(ambient_color.green * 255);
-  Uint8 b = static_cast<Uint8>(ambient_color.blue * 255);
-
-  SDL_SetRenderDrawColor(m_renderer, r, g, b, 255);
-  SDL_RenderClear(m_renderer);
-  SDL_RenderSetScale(m_renderer, 1.0f / m_LIGHTMAP_DIV, 1.0f / m_LIGHTMAP_DIV);
+  SDL_RenderSetScale(m_renderer,
+                     1.0f / static_cast<float>(m_LIGHTMAP_DIV),
+                     1.0f / static_cast<float>(m_LIGHTMAP_DIV));
 }
 
 void
@@ -74,59 +75,47 @@ SDLLightmap::end_draw()
 }
 
 void
-SDLLightmap::do_draw()
+SDLLightmap::clear(const Color& color)
 {
-  SDL_SetTextureBlendMode(m_texture, SDL_BLENDMODE_MOD);
+  SDL_SetRenderDrawColor(m_renderer, color.r8(), color.g8(), color.b8(), color.a8());
 
-  SDL_Rect dst_rect;
-  dst_rect.x = 0;
-  dst_rect.y = 0;
-  dst_rect.w = m_width;
-  dst_rect.h = m_height;
-
-  SDL_RenderCopy(m_renderer, m_texture, NULL, &dst_rect);
+  if (m_cliprect)
+  {
+    SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_NONE);
+    SDL_RenderFillRect(m_renderer, &*m_cliprect);
+  }
+  else
+  {
+    // This ignores the cliprect:
+    SDL_RenderClear(m_renderer);
+  }
 }
 
 void
-SDLLightmap::draw_surface(const DrawingRequest& request)
+SDLLightmap::set_clip_rect(const Rect& rect)
 {
-  SDLPainter::draw_surface(m_renderer, request);
+  m_cliprect = SDL_Rect{ rect.left,
+                         rect.top,
+                         rect.get_width(),
+                         rect.get_height() };
+
+  int ret = SDL_RenderSetClipRect(m_renderer, &*m_cliprect);
+  if (ret < 0)
+  {
+    log_warning << "SDLLightmap::set_clip_rect(): SDL_RenderSetClipRect() failed: " << SDL_GetError() << std::endl;
+  }
 }
 
 void
-SDLLightmap::draw_surface_part(const DrawingRequest& request)
+SDLLightmap::clear_clip_rect()
 {
-  SDLPainter::draw_surface_part(m_renderer, request);
-}
+  m_cliprect.reset();
 
-void
-SDLLightmap::draw_gradient(const DrawingRequest& request)
-{
-  SDLPainter::draw_gradient(m_renderer, request);
-}
-
-void
-SDLLightmap::draw_filled_rect(const DrawingRequest& request)
-{
-  SDLPainter::draw_filled_rect(m_renderer, request);
-}
-
-void
-SDLLightmap::draw_inverse_ellipse(const DrawingRequest& request)
-{
-  SDLPainter::draw_inverse_ellipse(m_renderer, request);
-}
-
-void
-SDLLightmap::draw_line(const DrawingRequest& request)
-{
-  SDLPainter::draw_line(m_renderer, request);
-}
-
-void
-SDLLightmap::draw_triangle(const DrawingRequest& request)
-{
-  SDLPainter::draw_triangle(m_renderer, request);
+  int ret = SDL_RenderSetClipRect(m_renderer, nullptr);
+  if (ret < 0)
+  {
+    log_warning << "SDLLightmap::clear_clip_rect(): SDL_RenderSetClipRect() failed: " << SDL_GetError() << std::endl;
+  }
 }
 
 void
@@ -136,8 +125,8 @@ SDLLightmap::get_light(const DrawingRequest& request) const
     = static_cast<GetLightRequest*>(request.request_data);
 
   SDL_Rect rect;
-  rect.x = static_cast<int>(request.pos.x / m_LIGHTMAP_DIV);
-  rect.y = static_cast<int>((m_height - request.pos.y) / m_LIGHTMAP_DIV);
+  rect.x = static_cast<int>(request.pos.x / static_cast<float>(m_LIGHTMAP_DIV));
+  rect.y = static_cast<int>(request.pos.y / static_cast<float>(m_LIGHTMAP_DIV));
   rect.w = 1;
   rect.h = 1;
 
@@ -153,9 +142,23 @@ SDLLightmap::get_light(const DrawingRequest& request) const
   }
   SDL_SetRenderTarget(m_renderer, 0);
 
-  *(getlightrequest->color_ptr) = Color(pixel[2] / 255.0f,
-                                        pixel[1] / 255.0f,
-                                        pixel[0] / 255.0f);
+  *(getlightrequest->color_ptr) = Color::from_rgb888(pixel[2], pixel[1], pixel[0]);
+}
+
+void
+SDLLightmap::render()
+{
+  SDL_SetTextureBlendMode(m_texture, SDL_BLENDMODE_MOD);
+
+  const Viewport& viewport = m_video_system.get_viewport();
+
+  SDL_Rect dst_rect;
+  dst_rect.x = 0;
+  dst_rect.y = 0;
+  dst_rect.w = viewport.get_screen_width();
+  dst_rect.h = viewport.get_screen_height();
+
+  SDL_RenderCopy(m_renderer, m_texture, NULL, &dst_rect);
 }
 
 /* EOF */

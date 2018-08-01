@@ -17,19 +17,28 @@
 #ifndef HEADER_SUPERTUX_VIDEO_SDL_PAINTER_HPP
 #define HEADER_SUPERTUX_VIDEO_SDL_PAINTER_HPP
 
-#include "SDL.h"
-#include "video/renderer.hpp"
+#include "video/painter.hpp"
 
-class SDLPainter
+class SDLVideoSystem;
+struct DrawingRequest;
+struct SDL_Renderer;
+
+class SDLPainter : public Painter
 {
 public:
-  static void draw_surface(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_surface_part(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_gradient(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_filled_rect(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_inverse_ellipse(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_line(SDL_Renderer* renderer, const DrawingRequest& request);
-  static void draw_triangle(SDL_Renderer* renderer, const DrawingRequest& request);
+  SDLPainter(SDLVideoSystem& video_system, SDL_Renderer* renderer);
+
+  virtual void draw_surface(const DrawingRequest& request) override;
+  virtual void draw_surface_part(const DrawingRequest& request) override;
+  virtual void draw_gradient(const DrawingRequest& request) override;
+  virtual void draw_filled_rect(const DrawingRequest& request) override;
+  virtual void draw_inverse_ellipse(const DrawingRequest& request) override;
+  virtual void draw_line(const DrawingRequest& request) override;
+  virtual void draw_triangle(const DrawingRequest& request) override;
+
+private:
+  SDLVideoSystem& m_video_system;
+  SDL_Renderer* m_renderer;
 
 private:
   SDLPainter(const SDLPainter&);

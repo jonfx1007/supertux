@@ -18,19 +18,21 @@
 
 #include <math.h>
 
-#include "math/random_generator.hpp"
-#include "scripting/squirrel_util.hpp"
 #include "supertux/globals.hpp"
 #include "util/reader.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 #include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 ParticleSystem::ParticleSystem(float max_particle_size_) :
   ExposedObject<ParticleSystem, scripting::ParticleSystem>(this),
   max_particle_size(max_particle_size_),
   z_pos(LAYER_BACKGROUND1),
   particles(),
-  virtual_width( SCREEN_WIDTH + max_particle_size * 2),
-  virtual_height(SCREEN_HEIGHT + max_particle_size * 2),
+  virtual_width(static_cast<float>(SCREEN_WIDTH) + max_particle_size * 2.0f),
+  virtual_height(static_cast<float>(SCREEN_HEIGHT) + max_particle_size * 2.0f),
   enabled(true)
 {
 }
@@ -80,7 +82,7 @@ void ParticleSystem::draw(DrawingContext& context)
     //if(pos.x > virtual_width) pos.x -= virtual_width;
     //if(pos.y > virtual_height) pos.y -= virtual_height;
 
-    context.draw_surface(particle->texture, pos, particle->angle, Color(1.0f, 1.0f, 1.0f), Blend(), z_pos);
+    context.color().draw_surface(particle->texture, pos, particle->angle, Color(1.0f, 1.0f, 1.0f), Blend(), z_pos);
   }
 
   context.pop_transform();

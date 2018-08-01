@@ -16,7 +16,8 @@
 
 #include "supertux/menu/menu_storage.hpp"
 
-#include "supertux/globals.hpp"
+#include <assert.h>
+
 #include "supertux/menu/addon_menu.hpp"
 #include "supertux/menu/cheat_menu.hpp"
 #include "supertux/menu/contrib_menu.hpp"
@@ -40,6 +41,7 @@
 #include "supertux/menu/worldmap_menu.hpp"
 #include "supertux/menu/worldmap_cheat_menu.hpp"
 #include "supertux/menu/world_set_menu.hpp"
+#include "util/log.hpp"
 
 MenuStorage* MenuStorage::s_instance = 0;
 
@@ -151,7 +153,8 @@ MenuStorage::create(MenuId menu_id)
       return std::unique_ptr<Menu>();
 
     default:
-      assert(!"unknown MenuId provided");
+      log_warning << "unknown MenuId provided" << std::endl;
+      assert(false);
       return std::unique_ptr<Menu>();
   }
 }

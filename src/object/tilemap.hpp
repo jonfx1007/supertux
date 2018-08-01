@@ -19,13 +19,19 @@
 
 #include <algorithm>
 
+#include "math/rect.hpp"
+#include "math/rectf.hpp"
+#include "math/size.hpp"
+#include "object/path_object.hpp"
 #include "object/path_walker.hpp"
 #include "scripting/exposed_object.hpp"
 #include "scripting/tilemap.hpp"
 #include "supertux/game_object.hpp"
 #include "video/color.hpp"
-#include "video/drawing_context.hpp"
+#include "video/drawing_effect.hpp"
+#include "video/drawing_target.hpp"
 
+class DrawingContext;
 class Tile;
 class TileSet;
 
@@ -33,7 +39,8 @@ class TileSet;
  * This class is responsible for drawing the level tiles
  */
 class TileMap : public GameObject,
-                public ExposedObject<TileMap, scripting::TileMap>
+                public ExposedObject<TileMap, scripting::TileMap>,
+                public PathObject
 {
 public:
   TileMap(const TileSet *tileset);
@@ -65,13 +72,14 @@ public:
   /** resizes the tilemap to a new width and height (tries to not destroy the
    * existing map)
    */
-  void resize(int newwidth, int newheight, int fill_id = 0);
-  void resize(Size newsize);
+  void resize(int newwidth, int newheight, int fill_id = 0,
+              int xoffset = 0, int yoffset = 0);
+  void resize(const Size& newsize, const Size& resize_offset);
 
-  size_t get_width() const
+  int get_width() const
   { return width; }
 
-  size_t get_height() const
+  int get_height() const
   { return height; }
 
   Size get_size() const
@@ -79,6 +87,8 @@ public:
 
   Vector get_offset() const
   { return offset; }
+
+  void move_by(const Vector& pos);
 
   /** Get the movement of this tilemap. The collision detection code may need a
    *  non-negative y-movement. Passing `false' as the `actual' argument will
@@ -92,19 +102,13 @@ public:
     }
   }
 
-  std::shared_ptr<Path> get_path() const
-  { return path; }
-
-  std::shared_ptr<PathWalker> get_walker() const
-  { return walker; }
-
   void set_offset(const Vector &offset_)
-  { this->offset = offset_; }
+  { offset = offset_; }
 
   /* Returns the position of the upper-left corner of
    * tile (x, y) in the sector. */
   Vector get_tile_position(int x, int y) const
-  { return offset + Vector(x,y) * 32; }
+  { return offset + Vector(static_cast<float>(x), static_cast<float>(y)) * 32.0f; }
 
   Rectf get_bbox() const
   { return Rectf(get_tile_position(0, 0), get_tile_position(width, height)); }
@@ -225,18 +229,16 @@ private:
 
   void float_channel(float target, float &current, float remaining_time, float elapsed_time);
 
-  std::shared_ptr<Path> path;
-  std::shared_ptr<PathWalker> walker;
-
-  /**
-   * Is the tilemap currently moving (following the path)
-   */
+  /** Is the tilemap currently moving (following the path) */
   bool running;
 
-  DrawingContext::Target draw_target; /**< set to LIGHTMAP to draw to lightmap */
+  /** Set to LIGHTMAP to draw to lightmap */
+  DrawingTarget draw_target;
 
   int new_size_x;
   int new_size_y;
+  int new_offset_x;
+  int new_offset_y;
   bool add_path;
 
 private:

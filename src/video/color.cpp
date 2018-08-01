@@ -14,9 +14,9 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <config.h>
-
 #include "video/color.hpp"
+
+#include <assert.h>
 
 const Color Color::BLACK(0.0, 0.0, 0.0);
 const Color Color::RED(1.0, 0.0, 0.0);
@@ -75,6 +75,12 @@ Color::operator==(const Color& other) const
 {
   return red == other.red && green == other.green && blue == other.blue
     && alpha == other.alpha;
+}
+
+bool
+Color::operator!=(const Color& other) const
+{
+  return !(operator==(other));
 }
 
 float

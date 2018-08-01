@@ -23,14 +23,12 @@
 #include "object/player.hpp"
 #include "object/tilemap.hpp"
 #include "supertux/level.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 
 Coin::Coin(const Vector& pos)
   : MovingSprite(pos, "images/objects/coin/coin.sprite", LAYER_OBJECTS - 1, COLGROUP_TOUCHABLE),
-    path(),
-    walker(),
+    PathObject(),
     offset(),
     from_tilemap(false),
     add_path(false),
@@ -42,8 +40,7 @@ Coin::Coin(const Vector& pos)
 
 Coin::Coin(const Vector& pos, TileMap* tilemap)
   : MovingSprite(pos, "images/objects/coin/coin.sprite", LAYER_OBJECTS - 1, COLGROUP_TOUCHABLE),
-    path(std::shared_ptr<Path>(tilemap->get_path())),
-    walker(std::shared_ptr<PathWalker>(tilemap->get_walker())),
+    PathObject(*tilemap),
     offset(),
     from_tilemap(true),
     add_path(false),
@@ -60,8 +57,7 @@ Coin::Coin(const Vector& pos, TileMap* tilemap)
 
 Coin::Coin(const ReaderMapping& reader)
   : MovingSprite(reader, "images/objects/coin/coin.sprite", LAYER_OBJECTS - 1, COLGROUP_TOUCHABLE),
-    path(),
-    walker(),
+    PathObject(),
     offset(),
     from_tilemap(false),
     add_path(false),
@@ -125,43 +121,43 @@ Coin::collect()
   } else {
     switch ((pitch_one - tile) % 7) {
       case -6:
-        pitch = 1.0/2;
+        pitch = 1.f/2;
         break;
       case -5:
-        pitch = 5.0/8;
+        pitch = 5.f/8;
         break;
       case -4:
-        pitch = 4.0/6;
+        pitch = 4.f/6;
         break;
       case -3:
-        pitch = 3.0/4;
+        pitch = 3.f/4;
         break;
       case -2:
-        pitch = 5.0/6;
+        pitch = 5.f/6;
         break;
       case -1:
-        pitch = 9.0/10;
+        pitch = 9.f/10;
         break;
       case 0:
-        pitch = 1.0;
+        pitch = 1.f;
         break;
       case 1:
-        pitch = 9.0/8;
+        pitch = 9.f/8;
         break;
       case 2:
-        pitch = 5.0/4;
+        pitch = 5.f/4;
         break;
       case 3:
-        pitch = 4.0/3;
+        pitch = 4.f/3;
         break;
       case 4:
-        pitch = 3.0/2;
+        pitch = 3.f/2;
         break;
       case 5:
-        pitch = 5.0/3;
+        pitch = 5.f/3;
         break;
       case 6:
-        pitch = 9.0/5;
+        pitch = 9.f/5;
         break;
     }
     last_pitch = pitch;
@@ -226,7 +222,7 @@ HeavyCoin::update(float elapsed_time)
 void
 HeavyCoin::collision_solid(const CollisionHit& hit)
 {
-  int clink_threshold = 100; // sets the minimum speed needed to result in collision noise
+  float clink_threshold = 100.0f; // sets the minimum speed needed to result in collision noise
   //TODO: colliding HeavyCoins should have their own unique sound
   if(hit.bottom) {
     if(physic.get_velocity_y() > clink_threshold)

@@ -18,16 +18,15 @@
 #define HEADER_SUPERTUX_BADGUY_WILLOWISP_HPP
 
 #include "badguy/badguy.hpp"
-
-class Path;
-class PathWalker;
-class SoundSource;
-
+#include "object/path_object.hpp"
 #include "scripting/exposed_object.hpp"
 #include "scripting/willowisp.hpp"
 
+class SoundSource;
+
 class WillOWisp : public BadGuy,
-                  public ExposedObject<WillOWisp, scripting::WillOWisp>
+                  public ExposedObject<WillOWisp, scripting::WillOWisp>,
+                  public PathObject
 {
 public:
   WillOWisp(const ReaderMapping& reader);
@@ -39,6 +38,7 @@ public:
   void active_update(float elapsed_time);
   virtual bool is_flammable() const { return false; }
   virtual bool is_freezable() const { return false; }
+  virtual bool is_hurtable() const { return false; }
   virtual void kill_fall() { vanish(); }
 
   /**
@@ -64,10 +64,6 @@ public:
   virtual ObjectSettings get_settings();
   virtual void move_to(const Vector& pos);
 
-  Path* get_path() const {
-    return path.get();
-  }
-
 protected:
   virtual bool collides(GameObject& other, const CollisionHit& hit) const;
   HitResponse collision_player(Player& player, const CollisionHit& hit);
@@ -86,10 +82,6 @@ private:
   std::string hit_script;
 
   std::unique_ptr<SoundSource> sound_source;
-
-  std::unique_ptr<Path>        path;
-  std::unique_ptr<PathWalker>  walker;
-
   float flyspeed;
   float track_range;
   float vanish_range;

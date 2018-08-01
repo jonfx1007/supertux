@@ -16,19 +16,13 @@
 
 #include "supertux/menu/editor_menu.hpp"
 
-#include "gui/menu.hpp"
+#include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "editor/editor.hpp"
-#include "editor/input_center.hpp"
-#include "editor/scroller.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/world.hpp"
 #include "util/gettext.hpp"
-#include "video/color.hpp"
-#include "video/drawing_context.hpp"
+#include "video/compositor.hpp"
 
 EditorMenu::EditorMenu()
 {
@@ -61,9 +55,10 @@ EditorMenu::EditorMenu()
 
   add_string_select(-1, _("Grid size"), &EditorInputCenter::selected_snap_grid_size, snap_grid_sizes);
 
-  add_toggle(-1, _("Render lighting (F6)"), &DrawingContext::render_lighting);
+  add_toggle(-1, _("Render lighting (F6)"), &Compositor::s_render_lighting);
   add_toggle(-1, _("Snap objects to grid (F7)"), &EditorInputCenter::snap_to_grid);
   add_toggle(-1, _("Show grid (F8)"), &EditorInputCenter::render_grid);
+  add_toggle(-1, _("Render background"), &EditorInputCenter::render_background);
   add_toggle(-1, _("Show scroller (F9)"), &EditorScroller::rendered);
 
   add_submenu(worldmap ? _("Worldmap properties") : _("Level properties"),
@@ -85,6 +80,7 @@ EditorMenu::~EditorMenu()
 void
 EditorMenu::menu_action(MenuItem* item)
 {
+  auto editor = Editor::current();
   switch (item->id)
   {
     case MNID_RETURNTOEDITOR:
@@ -92,8 +88,28 @@ EditorMenu::menu_action(MenuItem* item)
       break;
 
     case MNID_SAVELEVEL:
-      MenuManager::instance().clear_menu_stack();
-      Editor::current()->save_request = true;
+    {
+      bool is_sector_valid = false;
+      bool is_spawnpoint_valid = false;
+
+      editor->check_save_prerequisites(is_sector_valid, is_spawnpoint_valid);
+      if(is_sector_valid && is_spawnpoint_valid)
+      {
+        MenuManager::instance().clear_menu_stack();
+        editor->save_request = true;
+      }
+      else
+      {
+        if(!is_sector_valid)
+        {
+          Dialog::show_message(_("Couldn't find a \"main\" sector. Please change the name of the sector where you'd like Tux to start to \"main\""));
+        }
+        else if(!is_spawnpoint_valid)
+        {
+          Dialog::show_message(_("Couldn't find a \"main\" spawnpoint. Please change the name of the spawnpoint where you'd like Tux to start to \"main\""));
+        }
+      }
+    }
       break;
 
     case MNID_TESTLEVEL:

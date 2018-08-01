@@ -14,18 +14,15 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <math.h>
-
 #include "editor/scroller.hpp"
 
+#include <math.h>
+
 #include "editor/editor.hpp"
-#include "supertux/colorscheme.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/resources.hpp"
-#include "util/log.hpp"
 #include "video/drawing_context.hpp"
 #include "video/renderer.hpp"
 #include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 namespace {
 
@@ -45,10 +42,6 @@ EditorScroller::EditorScroller() :
 {
 }
 
-EditorScroller::~EditorScroller()
-{
-}
-
 bool
 EditorScroller::can_scroll() const {
   return scrolling && mouse_pos.x < SIZE && mouse_pos.y < SIZE;
@@ -58,12 +51,12 @@ void
 EditorScroller::draw(DrawingContext& context) {
   if (!rendered) return;
 
-  context.draw_filled_rect(Rectf(Vector(0, 0), Vector(SIZE, SIZE)),
-                           Color(0.9f, 0.9f, 1.0f, 0.6f),
-                           MIDDLE, LAYER_GUI-10);
-  context.draw_filled_rect(Rectf(Vector(40, 40), Vector(56, 56)),
-                           Color(0.9f, 0.9f, 1.0f, 0.6f),
-                           8, LAYER_GUI-20);
+  context.color().draw_filled_rect(Rectf(Vector(0, 0), Vector(SIZE, SIZE)),
+                                     Color(0.9f, 0.9f, 1.0f, 0.6f),
+                                     MIDDLE, LAYER_GUI-10);
+  context.color().draw_filled_rect(Rectf(Vector(40, 40), Vector(56, 56)),
+                                     Color(0.9f, 0.9f, 1.0f, 0.6f),
+                                     8, LAYER_GUI-20);
   if (can_scroll()) {
     draw_arrow(context, mouse_pos);
   }
@@ -81,8 +74,8 @@ EditorScroller::draw_arrow(DrawingContext& context, const Vector& pos) {
     // draw a triangle
     dir = dir.unit() * 8;
     Vector dir2 = Vector(-dir.y, dir.x);
-    context.draw_triangle(pos + dir, pos - dir + dir2, pos - dir - dir2,
-                          Color(1, 1, 1, 0.5), LAYER_GUI-20);
+    context.color().draw_triangle(pos + dir, pos - dir + dir2, pos - dir - dir2,
+                                    Color(1, 1, 1, 0.5), LAYER_GUI-20);
   }
 }
 
@@ -133,12 +126,12 @@ EditorScroller::event(SDL_Event& ev) {
     {
       if (!rendered) return false;
 
-      mouse_pos = VideoSystem::current()->get_renderer().to_logical(ev.motion.x, ev.motion.y);
+      mouse_pos = VideoSystem::current()->get_viewport().to_logical(ev.motion.x, ev.motion.y);
       if (mouse_pos.x < SIZE && mouse_pos.y < SIZE) {
         scrolling_vec = mouse_pos - Vector(MIDDLE, MIDDLE);
         if (scrolling_vec.x != 0 || scrolling_vec.y != 0) {
           float norm = scrolling_vec.norm();
-          scrolling_vec *= pow(M_E, norm/16 - 1);
+          scrolling_vec *= powf(static_cast<float>(M_E), norm / 16.0f - 1.0f);
         }
       }
       return false;

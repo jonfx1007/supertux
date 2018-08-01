@@ -368,6 +368,10 @@
     2666 2667 2668 2676
     2669 2670 2671 2677
     2672 2673 2674 2678
+    3531 3532    0    0
+    3536 3537    0    0
+    3533 3534 3535    0
+    3538 3539 3540    0
     )
    )
 
@@ -1062,8 +1066,8 @@
       1799 1797 1800    0
       1801 1781 1783 1780
       1794 1787 1788    0
-      1789 1790 1792 1793
       1786 1791 1796    0
+      1790 1792 1789 1793
       1804 1805 1806 1807
      
       2807 2808 2810 2812
@@ -1697,12 +1701,16 @@
     (images
       "tiles/goal/exitbg.png"
     )
+    (object-name "decal")
+    (object-data "(sprite \"images/decal/snow/exitbg.png\")")
   )
   (tile
     (id 127)
     (images
       "tiles/goal/exitfg.png"
     )
+    (object-name "decal")
+    (object-data "(sprite \"images/decal/snow/exitfg.png\")")
   )
   (tile
     (id 128)
@@ -4070,14 +4078,18 @@
 
   (tiles
    (width 8)
-   (height 4)
+   (height 6)
    (ids
     2647 2648 2649 2650 2663 2664 2665 2675
     2651 2652 2653 2654 2666 2667 2668 2676
     2655 2656 2657 2658 2669 2670 2671 2677
     2659 2660 2661 2662 2672 2673 2674 2678
+    3531 3532    0    0 3533 3534 3535    0
+    3536 3537    0    0 3538 3539 3540    0
     )
    (attributes
+    0 0 0 0 0 0 0 0
+    0 0 0 0 0 0 0 0
     0 0 0 0 0 0 0 0
     0 0 0 0 0 0 0 0
     0 0 0 0 0 0 0 0
@@ -5006,8 +5018,21 @@
       1 1 1
       1 1 0
     )
-    (image "tiles/castle/grey-special.png")
+    (image "tiles/castle/grey_special.png")
+  )
+  (tiles
+    (width 4)
+    (height 2)
+    (ids
+      3523 3524 3525 3526
+      3527 3528 3529 3530
+    )
+    (attributes
+      1024 1024 1024 1024
+      1024 1024 1024 1024
+    )
+    (image "tiles/background/storm-cloud-electrified.png")
   )
 
-  ;; next-id: 3515
+  ;; next-id: 3541
   )

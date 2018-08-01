@@ -16,13 +16,8 @@
 
 #include "object/cloud_particle_system.hpp"
 
-#include <math.h>
-
 #include "math/random_generator.hpp"
-#include "supertux/globals.hpp"
-#include "util/reader.hpp"
-#include "util/reader_mapping.hpp"
-#include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 CloudParticleSystem::CloudParticleSystem() :
   ParticleSystem(128),
@@ -50,8 +45,8 @@ void CloudParticleSystem::init()
   // create some random clouds
   for(size_t i=0; i<15; ++i) {
     auto particle = std::unique_ptr<CloudParticle>(new CloudParticle);
-    particle->pos.x = graphicsRandom.rand(static_cast<int>(virtual_width));
-    particle->pos.y = graphicsRandom.rand(static_cast<int>(virtual_height));
+    particle->pos.x = graphicsRandom.randf(virtual_width);
+    particle->pos.y = graphicsRandom.randf(virtual_height);
     particle->texture = cloudimage;
     particle->speed = -graphicsRandom.randf(25.0, 54.0);
 

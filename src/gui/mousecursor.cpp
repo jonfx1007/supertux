@@ -18,10 +18,11 @@
 
 #include <SDL.h>
 
-#include "supertux/globals.hpp"
 #include "video/drawing_context.hpp"
 #include "video/renderer.hpp"
+#include "video/surface.hpp"
 #include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 MouseCursor* MouseCursor::current_ = 0;
 
@@ -37,10 +38,6 @@ MouseCursor::MouseCursor(const std::string& cursor_file,
   m_cursor.push_back(Surface::create(cursor_file));
   m_cursor.push_back(Surface::create(cursor_click_file));
   m_cursor.push_back(Surface::create(cursor_link_file));
-}
-
-MouseCursor::~MouseCursor()
-{
 }
 
 void MouseCursor::set_state(MouseCursorState nstate)
@@ -65,9 +62,9 @@ void MouseCursor::draw(DrawingContext& context)
   {
     int x;
     int y;
-    Uint8 ispressed = SDL_GetMouseState(&x, &y);
+    Uint32 ispressed = SDL_GetMouseState(&x, &y);
 
-    Vector mouse_pos = VideoSystem::current()->get_renderer().to_logical(x, y);
+    Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(x, y);
 
     x = int(mouse_pos.x);
     y = int(mouse_pos.y);
@@ -78,14 +75,16 @@ void MouseCursor::draw(DrawingContext& context)
       tmp_state = MC_CLICK;
     }
 
-    context.draw_surface(m_cursor[static_cast<int>(tmp_state)],
-                         Vector(x - m_mid_x, y - m_mid_y),
-                         LAYER_GUI + 100);
+    context.color().draw_surface(m_cursor[static_cast<int>(tmp_state)],
+                                 Vector(static_cast<float>(x - m_mid_x),
+                                        static_cast<float>(y - m_mid_y)),
+                                 LAYER_GUI + 100);
 
     if (m_icon) {
-      context.draw_surface(m_icon, Vector(x - m_mid_x,
-                                          y - m_mid_y - m_icon->get_height()),
-                           LAYER_GUI + 100);
+      context.color().draw_surface(m_icon,
+                                   Vector(static_cast<float>(x - m_mid_x),
+                                          static_cast<float>(y - m_mid_y - m_icon->get_height())),
+                                   LAYER_GUI + 100);
     }
   }
 }

@@ -16,10 +16,7 @@
 
 #include "supertux/menu/download_dialog.hpp"
 
-#include <sstream>
-
-#include "gui/menu_manager.hpp"
-#include "util/gettext.hpp"
+#include "addon/addon_manager.hpp"
 
 DownloadDialog::DownloadDialog(TransferStatusPtr status, bool auto_close, bool passive) : Dialog(passive),
   m_status(status),
@@ -41,10 +38,7 @@ DownloadDialog::DownloadDialog(TransferStatusPtr status, bool auto_close, bool p
       }
       else
       {
-        std::unique_ptr<Dialog> dialog(new Dialog);
-        dialog->set_text(_("Error:\n") + m_status->error_msg);
-        dialog->add_button(_("Ok"));
-        MenuManager::instance().set_dialog(std::move(dialog));
+        Dialog::show_message(_("Error:\n") + m_status->error_msg);
       }
     });
 }

@@ -26,12 +26,12 @@ class FloatingImage : public GameObject
 public:
   FloatingImage(const std::string& sprite);
   virtual ~FloatingImage();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 
   void set_layer(int layer_) {
-    this->layer = layer_;
+    layer = layer_;
   }
 
   int get_layer() const {
@@ -39,21 +39,21 @@ public:
   }
 
   void set_pos(const Vector& pos_) {
-    this->pos = pos_;
+    pos = pos_;
   }
   const Vector& get_pos() const {
     return pos;
   }
 
   void set_anchor_point(AnchorPoint anchor_) {
-    this->anchor = anchor_;
+    anchor = anchor_;
   }
   AnchorPoint get_anchor_point() const {
     return anchor;
   }
 
   void set_visible(bool visible_) {
-    this->visible = visible_;
+    visible = visible_;
   }
   bool get_visible() const {
     return visible;

@@ -16,9 +16,6 @@
 
 #include "gui/menu.hpp"
 
-#include <math.h>
-#include <stdexcept>
-
 #define INCLUDE_MENU_ITEMS
 // This causes the #include "gui/menu_item.hpp" to include all menu items too.
 
@@ -26,23 +23,20 @@
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "gui/mousecursor.hpp"
-#include "supertux/colorscheme.hpp"
+#include "math/util.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/resources.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/timer.hpp"
-#include "util/gettext.hpp"
-#include "video/color.hpp"
 #include "video/drawing_context.hpp"
-#include "video/font.hpp"
 #include "video/renderer.hpp"
 #include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 static const float MENU_REPEAT_INITIAL = 0.4f;
 static const float MENU_REPEAT_RATE    = 0.1f;
 
 Menu::Menu() :
-  pos(Vector(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)),
+  pos(Vector(static_cast<float>(SCREEN_WIDTH) / 2.0f,
+             static_cast<float>(SCREEN_HEIGHT) / 2.0f)),
   delete_character(0),
   mn_input_char('\0'),
   menu_repeat_time(),
@@ -78,7 +72,7 @@ Menu::add_item(std::unique_ptr<MenuItem> new_item)
 
   if (active_item == -1 && !item->skippable())
   {
-    active_item = items.size() - 1;
+    active_item = static_cast<int>(items.size()) - 1;
   }
 
   calculate_width();
@@ -266,11 +260,11 @@ Menu::clear()
 void
 Menu::process_input()
 {
-  int menu_height = (int) get_height();
+  int menu_height = static_cast<int>(get_height());
   if (menu_height > SCREEN_HEIGHT)
   { // Scrolling
     int scroll_offset = (menu_height - SCREEN_HEIGHT) / 2 + 32;
-    pos.y = SCREEN_HEIGHT/2 - scroll_offset * ((float(active_item) / (items.size()-1)) - 0.5f) * 2.0f;
+    pos.y = static_cast<float>(SCREEN_HEIGHT) / 2.0f - static_cast<float>(scroll_offset) * ((static_cast<float>(active_item) / static_cast<float>(items.size() - 1)) - 0.5f) * 2.0f;
   }
 
   MenuAction menuaction = MENU_ACTION_NONE;
@@ -406,19 +400,19 @@ Menu::draw_item(DrawingContext& context, int index)
   MenuItem* pitem = items[index].get();
 
   float x_pos       = pos.x - menu_width_/2;
-  float y_pos       = pos.y + 24*index - menu_height/2 + 12;
+  float y_pos       = pos.y + 24.0f * static_cast<float>(index) - menu_height / 2.0f + 12.0f;
 
-  pitem->draw(context, Vector(x_pos, y_pos), menu_width_, active_item == index);
+  pitem->draw(context, Vector(x_pos, y_pos), static_cast<int>(menu_width_), active_item == index);
 
   if(active_item == index)
   {
-    float blink = (sinf(real_time * M_PI * 1.0f)/2.0f + 0.5f) * 0.5f + 0.25f;
-    context.draw_filled_rect(Rectf(Vector(pos.x - menu_width_/2 + 10 - 2, y_pos - 12 - 2),
+    float blink = (sinf(real_time * math::PI * 1.0f)/2.0f + 0.5f) * 0.5f + 0.25f;
+    context.color().draw_filled_rect(Rectf(Vector(pos.x - menu_width_/2 + 10 - 2, y_pos - 12 - 2),
                                    Vector(pos.x + menu_width_/2 - 10 + 2, y_pos + 12 + 2)),
                              Color(1.0f, 1.0f, 1.0f, blink),
                              14.0f,
                              LAYER_GUI-10);
-    context.draw_filled_rect(Rectf(Vector(pos.x - menu_width_/2 + 10, y_pos - 12),
+    context.color().draw_filled_rect(Rectf(Vector(pos.x - menu_width_/2 + 10, y_pos - 12),
                                    Vector(pos.x + menu_width_/2 - 10, y_pos + 12)),
                              Color(1.0f, 1.0f, 1.0f, 0.5f),
                              12.0f,
@@ -434,7 +428,7 @@ Menu::calculate_width()
   float max_width = 0;
   for(unsigned int i = 0; i < items.size(); ++i)
   {
-    float w = items[i]->get_width();
+    float w = static_cast<float>(items[i]->get_width());
     if(w > max_width)
       max_width = w;
   }
@@ -450,14 +444,14 @@ Menu::get_width() const
 float
 Menu::get_height() const
 {
-  return items.size() * 24;
+  return static_cast<float>(items.size() * 24);
 }
 
 void
 Menu::on_window_resize()
 {
-  pos.x = SCREEN_WIDTH / 2;
-  pos.y = SCREEN_HEIGHT / 2;
+  pos.x = static_cast<float>(SCREEN_WIDTH) / 2.0f;
+  pos.y = static_cast<float>(SCREEN_HEIGHT) / 2.0f;
 }
 
 void
@@ -465,28 +459,28 @@ Menu::draw(DrawingContext& context)
 {
   if (!items[active_item]->help.empty())
   {
-    int text_width  = (int) Resources::normal_font->get_text_width(items[active_item]->help);
-    int text_height = (int) Resources::normal_font->get_text_height(items[active_item]->help);
+    int text_width  = static_cast<int>(Resources::normal_font->get_text_width(items[active_item]->help));
+    int text_height = static_cast<int>(Resources::normal_font->get_text_height(items[active_item]->help));
 
-    Rectf text_rect(pos.x - text_width/2 - 8,
-                   SCREEN_HEIGHT - 48 - text_height/2 - 4,
-                   pos.x + text_width/2 + 8,
-                   SCREEN_HEIGHT - 48 + text_height/2 + 4);
+    Rectf text_rect(pos.x - static_cast<float>(text_width) / 2.0f - 8.0f,
+                    static_cast<float>(SCREEN_HEIGHT) - 48.0f - static_cast<float>(text_height) / 2.0f - 4.0f,
+                    pos.x + static_cast<float>(text_width) / 2.0f + 8.0f,
+                    static_cast<float>(SCREEN_HEIGHT) - 48.0f + static_cast<float>(text_height) / 2.0f + 4.0f);
 
-    context.draw_filled_rect(Rectf(text_rect.p1 - Vector(4,4),
-                                   text_rect.p2 + Vector(4,4)),
-                             Color(0.2f, 0.3f, 0.4f, 0.8f),
-                             16.0f,
-                             LAYER_GUI-10);
+    context.color().draw_filled_rect(Rectf(text_rect.p1 - Vector(4,4),
+                                             text_rect.p2 + Vector(4,4)),
+                                       Color(0.2f, 0.3f, 0.4f, 0.8f),
+                                       16.0f,
+                                       LAYER_GUI-10);
 
-    context.draw_filled_rect(text_rect,
-                             Color(0.6f, 0.7f, 0.8f, 0.5f),
-                             16.0f,
-                             LAYER_GUI-10);
+    context.color().draw_filled_rect(text_rect,
+                                       Color(0.6f, 0.7f, 0.8f, 0.5f),
+                                       16.0f,
+                                       LAYER_GUI-10);
 
-    context.draw_text(Resources::normal_font, items[active_item]->help,
-                      Vector(pos.x, SCREEN_HEIGHT - 48 - text_height/2),
-                      ALIGN_CENTER, LAYER_GUI);
+    context.color().draw_text(Resources::normal_font, items[active_item]->help,
+                              Vector(pos.x, static_cast<float>(SCREEN_HEIGHT) - 48.0f - static_cast<float>(text_height) / 2.0f),
+                              ALIGN_CENTER, LAYER_GUI);
   }
 
   for(unsigned int i = 0; i < items.size(); ++i)
@@ -546,14 +540,12 @@ Menu::event(const SDL_Event& ev)
     case SDL_MOUSEBUTTONDOWN:
     if(ev.button.button == SDL_BUTTON_LEFT)
     {
-      Vector mouse_pos = VideoSystem::current()->get_renderer().to_logical(ev.motion.x, ev.motion.y);
-      int x = int(mouse_pos.x);
-      int y = int(mouse_pos.y);
+      Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(ev.motion.x, ev.motion.y);
 
-      if(x > pos.x - get_width()/2 &&
-         x < pos.x + get_width()/2 &&
-         y > pos.y - get_height()/2 &&
-         y < pos.y + get_height()/2)
+      if (mouse_pos.x > pos.x - get_width() / 2.0f &&
+          mouse_pos.x < pos.x + get_width() / 2.0f &&
+          mouse_pos.y > pos.y - get_height() / 2.0f &&
+          mouse_pos.y < pos.y + get_height() / 2.0f)
       {
         process_action(MENU_ACTION_HIT);
       }
@@ -562,7 +554,7 @@ Menu::event(const SDL_Event& ev)
 
     case SDL_MOUSEMOTION:
     {
-      Vector mouse_pos = VideoSystem::current()->get_renderer().to_logical(ev.motion.x, ev.motion.y);
+      Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(ev.motion.x, ev.motion.y);
       float x = mouse_pos.x;
       float y = mouse_pos.y;
 
@@ -599,7 +591,7 @@ Menu::set_active_item(int id)
 {
   for(size_t i = 0; i < items.size(); ++i) {
     if(items[i]->id == id) {
-      active_item = i;
+      active_item = static_cast<int>(i);
       break;
     }
   }

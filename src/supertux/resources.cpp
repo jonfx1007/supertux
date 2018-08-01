@@ -18,9 +18,8 @@
 #include "supertux/resources.hpp"
 
 #include "gui/mousecursor.hpp"
-#include "sprite/sprite_manager.hpp"
-#include "supertux/player_status.hpp"
 #include "video/font.hpp"
+#include "video/surface.hpp"
 
 std::unique_ptr<MouseCursor> Resources::mouse_cursor;
 
@@ -34,6 +33,7 @@ SurfacePtr Resources::checkbox_checked;
 SurfacePtr Resources::back;
 SurfacePtr Resources::arrow_left;
 SurfacePtr Resources::arrow_right;
+SurfacePtr Resources::no_tile;
 
 Resources::Resources()
 {
@@ -55,11 +55,13 @@ Resources::Resources()
   back = Surface::create("images/engine/menu/arrow-back.png");
   arrow_left = Surface::create("images/engine/menu/arrow-left.png");
   arrow_right = Surface::create("images/engine/menu/arrow-right.png");
+  no_tile = Surface::create("images/tiles/auxiliary/notile.png");
 }
 
 Resources::~Resources()
 {
   // Free menu images
+  no_tile.reset();
   checkbox.reset();
   checkbox_checked.reset();
   back.reset();

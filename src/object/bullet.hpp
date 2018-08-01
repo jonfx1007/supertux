@@ -17,7 +17,7 @@
 #ifndef HEADER_SUPERTUX_OBJECT_BULLET_HPP
 #define HEADER_SUPERTUX_OBJECT_BULLET_HPP
 
-#include "sprite/sprite.hpp"
+#include "sprite/sprite_ptr.hpp"
 #include "supertux/moving_object.hpp"
 #include "supertux/physic.hpp"
 #include "supertux/player_status.hpp"
@@ -26,13 +26,12 @@ class Bullet : public MovingObject
 {
 public:
   Bullet(const Vector& pos, float xm, int dir, BonusType type);
-  ~Bullet();
 
   void update(float elapsed_time);
   void draw(DrawingContext& context);
   void collision_solid(const CollisionHit& hit);
   HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 

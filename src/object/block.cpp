@@ -23,14 +23,14 @@
 #include "badguy/bomb.hpp"
 #include "object/broken_brick.hpp"
 #include "object/coin.hpp"
-#include "object/flower.hpp"
 #include "object/growup.hpp"
 #include "object/player.hpp"
-#include "object/portable.hpp"
+#include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/constants.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 static const float BOUNCY_BRICK_MAX_OFFSET = 8;
 static const float BOUNCY_BRICK_SPEED = 90;
@@ -39,6 +39,7 @@ static const float BUMP_ROTATION_ANGLE = 10;
 Block::Block(SpritePtr newsprite) :
   sprite(newsprite),
   sprite_name(),
+  default_sprite_name(),
   bouncing(false),
   breaking(false),
   bounce_dir(0),
@@ -54,6 +55,7 @@ Block::Block(SpritePtr newsprite) :
 Block::Block(const ReaderMapping& lisp, const std::string& sprite_file) :
   sprite(),
   sprite_name(),
+  default_sprite_name(),
   bouncing(false),
   breaking(false),
   bounce_dir(0),
@@ -70,15 +72,12 @@ Block::Block(const ReaderMapping& lisp, const std::string& sprite_file) :
   }
   sprite = SpriteManager::current()->create(sf);
   sprite_name = sf;
+  default_sprite_name = sprite_name;
 
   bbox.set_size(32, 32.1f);
   set_group(COLGROUP_STATIC);
   SoundManager::current()->preload("sounds/upgrade.wav");
   SoundManager::current()->preload("sounds/brick.wav");
-}
-
-Block::~Block()
-{
 }
 
 HitResponse
@@ -152,7 +151,7 @@ Block::update(float elapsed_time)
 void
 Block::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), LAYER_OBJECTS+1);
+  sprite->draw(context.color(), get_pos(), LAYER_OBJECTS+1);
 }
 
 void
@@ -201,7 +200,7 @@ Block::break_me()
 ObjectSettings Block::get_settings()
 {
   ObjectSettings result = MovingObject::get_settings();
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite");
+  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name);
   spr.select.push_back(".sprite");
   result.options.push_back(spr);
   return result;
@@ -210,6 +209,15 @@ ObjectSettings Block::get_settings()
 void Block::after_editor_set()
 {
   sprite = SpriteManager::current()->create(sprite_name);
+}
+
+void Block::save(Writer& writer)
+{
+  MovingObject::save(writer);
+  if(sprite_name != get_default_sprite_name())
+  {
+    writer.write("sprite", sprite_name);
+  }
 }
 
 /* EOF */

@@ -16,14 +16,14 @@
 
 #include "video/video_system.hpp"
 
+#include <assert.h>
 #include <config.h>
-#include <stdexcept>
 
 #include "util/log.hpp"
 #include "video/sdl/sdl_video_system.hpp"
 
 #ifdef HAVE_OPENGL
-#include "video/gl/gl_video_system.hpp"
+#  include "video/gl/gl_video_system.hpp"
 #endif
 
 std::unique_ptr<VideoSystem>
@@ -60,7 +60,8 @@ VideoSystem::create(VideoSystem::Enum video_system)
       return std::unique_ptr<VideoSystem>(new SDLVideoSystem);
 
     default:
-      assert(!"invalid video system in config");
+      log_fatal << "invalid video system in config" << std::endl;
+      assert(false);
       return {};
   }
 }
@@ -104,7 +105,8 @@ VideoSystem::get_video_string(VideoSystem::Enum video)
     case PURE_SDL:
       return "sdl";
     default:
-      assert(!"invalid video system in config");
+      log_fatal << "invalid video system in config" << std::endl;
+      assert(false);
       return "auto";
   }
 }

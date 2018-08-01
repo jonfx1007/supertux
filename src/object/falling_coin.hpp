@@ -17,7 +17,8 @@
 #ifndef HEADER_SUPERTUX_OBJECT_FALLING_COIN_HPP
 #define HEADER_SUPERTUX_OBJECT_FALLING_COIN_HPP
 
-#include "sprite/sprite.hpp"
+#include "math/vector.hpp"
+#include "sprite/sprite_ptr.hpp"
 #include "supertux/game_object.hpp"
 #include "supertux/physic.hpp"
 
@@ -25,11 +26,10 @@ class FallingCoin : public GameObject
 {
 public:
   FallingCoin(const Vector& start_position, const int x_vel);
-  ~FallingCoin();
 
   void draw(DrawingContext& context);
   void update(float elapsed_time);
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 

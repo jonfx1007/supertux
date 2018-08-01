@@ -20,28 +20,53 @@
 #include <memory>
 #include <SDL.h>
 
+#include "math/size.hpp"
 #include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
+class GLRenderer;
+class GLLightmap;
+class Rect;
 class TextureManager;
+struct SDL_Surface;
 
-class GLVideoSystem : public VideoSystem
+class GLVideoSystem final : public VideoSystem
 {
-private:
-  std::unique_ptr<TextureManager> m_texture_manager;
-  std::unique_ptr<Renderer> m_renderer;
-  std::unique_ptr<Lightmap> m_lightmap;
-
 public:
   GLVideoSystem();
+  ~GLVideoSystem();
 
-  Renderer& get_renderer() const override;
-  Lightmap& get_lightmap() const override;
-  TexturePtr new_texture(SDL_Surface* image) override;
-  SurfaceData* new_surface_data(const Surface& surface) override;
-  void free_surface_data(SurfaceData* surface_data) override;
+  virtual Renderer& get_renderer() const override;
+  virtual Lightmap& get_lightmap() const override;
 
-  void apply_config() override;
-  void resize(int w, int h) override;
+  virtual TexturePtr new_texture(SDL_Surface* image) override;
+
+  virtual const Viewport& get_viewport() const override { return m_viewport; }
+  virtual void apply_config() override;
+  virtual void flip() override;
+  virtual void on_resize(int w, int h) override;
+
+  virtual void set_gamma(float gamma) override;
+  virtual void set_title(const std::string& title) override;
+  virtual void set_icon(SDL_Surface* icon) override;
+
+  virtual void do_take_screenshot() override;
+
+  Size get_window_size() const;
+
+private:
+  void create_window();
+  void apply_video_mode();
+
+private:
+  std::unique_ptr<TextureManager> m_texture_manager;
+  std::unique_ptr<GLRenderer> m_renderer;
+  std::unique_ptr<GLLightmap> m_lightmap;
+
+  SDL_Window* m_window;
+  SDL_GLContext m_glcontext;
+  Size m_desktop_size;
+  Viewport m_viewport;
 
 private:
   GLVideoSystem(const GLVideoSystem&) = delete;

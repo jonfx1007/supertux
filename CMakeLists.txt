@@ -39,8 +39,7 @@ PROJECT(SUPERTUX)
 
 ### CMake configuration
 
-# allow building with CMake 2.8. Set compatibility options. Use some bundled modules as a fallback
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 IF(COMMAND cmake_policy)
   CMAKE_POLICY(SET CMP0003 NEW)
   CMAKE_POLICY(SET CMP0008 NEW)
@@ -49,6 +48,10 @@ IF(COMMAND cmake_policy)
     CMAKE_POLICY(SET CMP0043 OLD)
   ENDIF(POLICY CMP0043)
 ENDIF(COMMAND cmake_policy)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/mk/cmake)
 INCLUDE(ConfigureFiles)
@@ -145,6 +148,7 @@ OPTION(ENABLE_OPENGL "Enable OpenGL support" ON)
 OPTION(GLBINDING_ENABLED "Use glbinding instead of GLEW" OFF)
 OPTION(GLBINDING_DEBUG_OUTPUT "Enable glbinding debug output for each called OpenGL function" OFF)
 IF(ENABLE_OPENGL)
+  SET(OpenGL_GL_PREFERENCE "LEGACY")
   FIND_PACKAGE(OpenGL)
   IF(OPENGL_FOUND)
     INCLUDE_DIRECTORIES(SYSTEM ${OPENGL_INCLUDE_DIR})
@@ -449,20 +453,6 @@ OPTION(WERROR "Stop on first compiler warning" OFF)
 OPTION(WARNINGS "Enable long list of warnings for compiler to check" OFF)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # http://www.guyrutenberg.com/2014/01/05/enabling-c11-c0x-in-cmake/
-  include(CheckCXXCompilerFlag)
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-  if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  else(COMPILER_SUPPORTS_CXX11)
-    CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-    if(COMPILER_SUPPORTS_CXX0X)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-    else(COMPILER_SUPPORTS_CXX0X)
-      message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
-    endif(COMPILER_SUPPORTS_CXX0X)
-  endif(COMPILER_SUPPORTS_CXX11)
-
   SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -g" CACHE STRING "Debug flags")
   SET(CMAKE_C_FLAGS_DEBUG "-O0 -g" CACHE STRING "Debug flags")
   SET(CMAKE_CXX_FLAGS_PROFILE "-pg" CACHE STRING "Profile flags")
@@ -476,14 +466,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   ENDIF(WERROR)
   IF(WARNINGS)
     # temporarily disabled:
-    #   -Wsign-conversion -Wfloat-equal -Wconversion -Wundef -Wswitch-default
+    #   -Wsign-conversion -Wfloat-equal -Wundef -Wswitch-default
     #   -Wswitch-enum -Wsign-promo -Wcast-qual -Woverloaded-virtual -Wmissing-format-attribute
-    #   -Wold-style-cast -Wpadded -Wabi -Winline -Wunsafe-loop-optimizations -Wstrict-overflow=5
+    #   -Wpadded -Wabi -Winline -Wunsafe-loop-optimizations -Wstrict-overflow=5
     # fails on MinGW:
     #   -ansi
-    # fails on clang:
-    #   -Wlogical-op -Wstrict-null-sentinel
-    SET(SUPERTUX2_EXTRA_WARNING_FLAGS "-fdiagnostics-show-option -pedantic -Wno-long-long -Wcast-align -Wdisabled-optimization -Winit-self -Winvalid-pch -Wmissing-include-dirs -Wmissing-noreturn -Wpacked -Wredundant-decls -Wstack-protector -Wformat=2 -Weffc++ -Wctor-dtor-privacy  -Wno-unused-parameter -Wshadow -Wnon-virtual-dtor -Wcast-qual")
+    SET(SUPERTUX2_EXTRA_WARNING_FLAGS "-fdiagnostics-show-option -pedantic -Wno-long-long -Wcast-align -Wdisabled-optimization -Winit-self -Winvalid-pch -Wmissing-include-dirs -Wmissing-noreturn -Wpacked -Wredundant-decls -Wstack-protector -Wformat=2 -Weffc++ -Wctor-dtor-privacy  -Wno-unused-parameter -Wshadow -Wnon-virtual-dtor -Wcast-qual -Wold-style-cast")
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      SET(SUPERTUX2_EXTRA_WARNING_FLAGS "${SUPERTUX2_EXTRA_WARNING_FLAGS} -Wconversion -Wlogical-op -Wstrict-null-sentinel -Wint-in-bool-context")
+    else()
+      SET(SUPERTUX2_EXTRA_WARNING_FLAGS "${SUPERTUX2_EXTRA_WARNING_FLAGS} -Wconversion -Wno-sign-conversion")
+    endif()
   ENDIF(WARNINGS)
 endif()
 
@@ -731,6 +724,7 @@ ELSE(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND DISABLE_CPACK_BUNDLING)
   SET(APPS "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${INSTALL_SUBDIR_BIN}/supertux2")
 
   INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.png ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.xpm DESTINATION "share/pixmaps/")
+  INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/supertux2.svg DESTINATION "share/icons/hicolor/scalable/apps")
 
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND DISABLE_CPACK_BUNDLING)
 ENDIF(WIN32 AND NOT UNIX)
@@ -748,7 +742,7 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL.md ${CMAKE_CURRENT_SOURCE_DIR}
 
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/credits.stxt DESTINATION ${INSTALL_SUBDIR_SHARE})
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/supertux2.appdata.xml DESTINATION "share/appdata" )
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/supertux2.appdata.xml DESTINATION "share/metainfo" )
 
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/images
                   ${CMAKE_CURRENT_SOURCE_DIR}/data/fonts

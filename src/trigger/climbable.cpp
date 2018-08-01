@@ -18,12 +18,11 @@
 
 #include "editor/editor.hpp"
 #include "object/player.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/resources.hpp"
-#include "supertux/object_factory.hpp"
-#include "util/gettext.hpp"
 #include "util/reader_mapping.hpp"
 #include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 namespace {
 const float GRACE_DX = 8; // how far off may the player's bounding-box be x-wise
@@ -99,12 +98,12 @@ Climbable::draw(DrawingContext& context)
   if (climbed_by && !message.empty()) {
     context.push_transform();
     context.set_translation(Vector(0, 0));
-    Vector pos = Vector(0, SCREEN_HEIGHT/2 - Resources::normal_font->get_height()/2);
-    context.draw_center_text(Resources::normal_font, _(message), pos, LAYER_HUD, Climbable::text_color);
+    Vector pos = Vector(0, static_cast<float>(SCREEN_HEIGHT) / 2.0f - Resources::normal_font->get_height() / 2.0f);
+    context.color().draw_center_text(Resources::normal_font, _(message), pos, LAYER_HUD, Climbable::text_color);
     context.pop_transform();
   }
   if (Editor::is_active()) {
-    context.draw_filled_rect(bbox, Color(1.0f, 1.0f, 0.0f, 0.6f),
+    context.color().draw_filled_rect(bbox, Color(1.0f, 1.0f, 0.0f, 0.6f),
                              0.0f, LAYER_OBJECTS);
   }
 }

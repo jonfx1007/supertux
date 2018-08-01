@@ -19,20 +19,13 @@
 #include "badguy/goldbomb.hpp"
 #include "object/bonus_block.hpp"
 #include "object/coin.hpp"
-#include "physfs/ifile_streambuf.hpp"
 #include "physfs/physfs_file_system.hpp"
 #include "supertux/sector.hpp"
-#include "supertux/tile_manager.hpp"
-#include "supertux/tile_set.hpp"
 #include "trigger/secretarea_trigger.hpp"
 #include "util/file_system.hpp"
-#include "util/log.hpp"
 #include "util/writer.hpp"
 
-#include <sstream>
-#include <stdexcept>
-
-using namespace std;
+#include <physfs.h>
 
 Level* Level::_current = 0;
 
@@ -97,7 +90,7 @@ Level::save(const std::string& filepath, bool retry)
     if (license != "") {
       writer.write("license", license, false);
     }
-    if (target_time){
+    if (target_time != 0.0f){
       writer.write("target-time", target_time);
     }
 
@@ -183,10 +176,9 @@ Level::get_total_coins() const
         {
           total_coins += block->hit_counter;
           continue;
-        } else if (block->contents == BonusBlock::CONTENT_RAIN) {
-          total_coins += 10;
-          continue;
-        } else if (block->contents == BonusBlock::CONTENT_EXPLODE) {
+        } else if (block->contents == BonusBlock::CONTENT_RAIN ||
+                   block->contents == BonusBlock::CONTENT_EXPLODE)
+        {
           total_coins += 10;
           continue;
         }

@@ -20,14 +20,11 @@
 
 #include "audio/sound_manager.hpp"
 #include "math/random_generator.hpp"
-#include "object/camera.hpp"
 #include "object/electrifier.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/reader_mapping.hpp"
 
 #define  LIFETIME 5
 #define  MOVETIME 0.75
@@ -116,7 +113,7 @@ Kugelblitz::hit(const CollisionHit& hit_)
     //Set random initial speed and direction
     direction = gameRandom.rand(2)? 1: -1;
     int speed = (BASE_SPEED + (gameRandom.rand(RAND_SPEED))) * direction;
-    physic.set_velocity_x(speed);
+    physic.set_velocity_x(static_cast<float>(speed));
     movement_timer.start(MOVETIME);
     lifetime.start(LIFETIME);
 
@@ -136,14 +133,14 @@ Kugelblitz::active_update(float elapsed_time)
       if (movement_timer.check()) {
         if (direction == 1) direction = -1; else direction = 1;
         int speed = (BASE_SPEED + (gameRandom.rand(RAND_SPEED))) * direction;
-        physic.set_velocity_x(speed);
+        physic.set_velocity_x(static_cast<float>(speed));
         movement_timer.start(MOVETIME);
       }
     }
 
     if (is_in_water()) {
-      Sector::current()->add_object( std::make_shared<Electrifier>(75,1421,1.5));
-      Sector::current()->add_object( std::make_shared<Electrifier>(76,1422,1.5));
+      Sector::current()->add_object( std::make_shared<Electrifier>(TileChangeMap(
+                                            { {75, 1421}, {76, 1422} }), 1.5));
       explode();
     }
   }
@@ -153,16 +150,13 @@ Kugelblitz::active_update(float elapsed_time)
 void
 Kugelblitz::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), layer);
+  sprite->draw(context.color(), get_pos(), layer);
 
   //Only draw light in dark areas
   context.get_light( bbox.get_middle(), &light );
   if (light.red + light.green < 2.0){
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    sprite->draw(context, get_pos(), layer);
-    lightsprite->draw(context, bbox.get_middle(), 0);
-    context.pop_target();
+    sprite->draw(context.light(), get_pos(), layer);
+    lightsprite->draw(context.light(), bbox.get_middle(), 0);
   }
 }
 

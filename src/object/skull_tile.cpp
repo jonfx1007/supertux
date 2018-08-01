@@ -14,11 +14,11 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "object/skull_tile.hpp"
+
 #include "math/random_generator.hpp"
 #include "object/player.hpp"
-#include "object/skull_tile.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 static const float CRACKTIME = 0.3f;
@@ -49,10 +49,10 @@ SkullTile::draw(DrawingContext& context)
   Vector pos = get_pos();
   // shaking
   if(timer.get_timegone() > CRACKTIME) {
-    pos.x += graphicsRandom.rand(-3, 3);
+    pos.x += static_cast<float>(graphicsRandom.rand(-3, 3));
   }
 
-  sprite->draw(context, pos, layer);
+  sprite->draw(context.color(), pos, layer);
 }
 
 void

@@ -19,35 +19,42 @@
 
 #include "video/lightmap.hpp"
 
-#include "SDL.h"
+#include <SDL.h>
+#include <boost/optional.hpp>
+
+#include "video/sdl/sdl_painter.hpp"
 
 class Color;
+class SDLVideoSystem;
 struct DrawingRequest;
+struct SDL_Renderer;
+struct SDL_Texture;
 
 class SDLLightmap : public Lightmap
 {
 public:
-  SDLLightmap();
+  SDLLightmap(SDLVideoSystem& video_system, SDL_Renderer* renderer);
   ~SDLLightmap();
 
-  void start_draw(const Color &ambient_color) override;
-  void end_draw() override;
-  void do_draw() override;
-  void draw_surface(const DrawingRequest& request) override;
-  void draw_surface_part(const DrawingRequest& request) override;
-  void draw_gradient(const DrawingRequest& request) override;
-  void draw_filled_rect(const DrawingRequest& request) override;
-  void draw_inverse_ellipse(const DrawingRequest& request) override;
-  void draw_line(const DrawingRequest& request) override;
-  void draw_triangle(const DrawingRequest& request) override;
-  void get_light(const DrawingRequest& request) const override;
+  virtual void start_draw() override;
+  virtual void end_draw() override;
+
+  virtual SDLPainter& get_painter() override { return m_painter; }
+  virtual void clear(const Color& color) override;
+
+  virtual void set_clip_rect(const Rect& rect) override;
+  virtual void clear_clip_rect() override;
+
+  virtual void get_light(const DrawingRequest& request) const override;
+  virtual void render() override;
 
 private:
+  SDLVideoSystem& m_video_system;
   SDL_Renderer* m_renderer;
+  SDLPainter m_painter;
   SDL_Texture* m_texture;
-  int m_width;
-  int m_height;
   int m_LIGHTMAP_DIV;
+  boost::optional<SDL_Rect> m_cliprect;
 
 private:
   SDLLightmap(const SDLLightmap&);

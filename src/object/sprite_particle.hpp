@@ -19,8 +19,9 @@
 #define HEADER_SUPERTUX_OBJECT_SPRITE_PARTICLE_HPP
 
 #include "object/anchor_point.hpp"
-#include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
+#include "sprite/sprite_ptr.hpp"
+#include "supertux/game_object.hpp"
+#include "video/drawing_context.hpp"
 
 class Player;
 
@@ -33,7 +34,7 @@ protected:
   virtual void hit(Player& player);
   virtual void update(float elapsed_time);
   virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 

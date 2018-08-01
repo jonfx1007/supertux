@@ -14,15 +14,16 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "audio/sound_manager.hpp"
 #include "badguy/mole.hpp"
-#include "badguy/mole_rock.hpp"
-#include "math/random_generator.hpp"
-#include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
-#include "supertux/sector.hpp"
 
 #include <math.h>
+
+#include "audio/sound_manager.hpp"
+#include "badguy/mole_rock.hpp"
+#include "math/random_generator.hpp"
+#include "math/util.hpp"
+#include "sprite/sprite.hpp"
+#include "supertux/sector.hpp"
 
 static const float MOLE_WAIT_TIME = 0.2f; /**< time to wait before and after throwing */
 static const float THROW_TIME = 4.6f; /**< time to spend throwing */
@@ -31,18 +32,6 @@ static const float THROW_VELOCITY = 400; /**< initial velocity of thrown rocks *
 
 Mole::Mole(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/mole/mole.sprite", LAYER_TILES-1),
-  state(PRE_THROWING),
-  timer(),
-  throw_timer()
-{
-  physic.enable_gravity(false);
-  SoundManager::current()->preload("sounds/fall.wav");
-  SoundManager::current()->preload("sounds/squish.wav");
-  SoundManager::current()->preload("sounds/dartfire.wav");
-}
-
-Mole::Mole(const Vector& pos) :
-  BadGuy(pos, "images/creatures/mole/mole.sprite", LAYER_TILES-1),
   state(PRE_THROWING),
   timer(),
   throw_timer()
@@ -89,9 +78,9 @@ Mole::collision_squished(GameObject& )
 void
 Mole::throw_rock()
 {
-  float angle = gameRandom.rand(90 - 15, 90 + 15) * (M_PI / 180);
-  float vx = cos(angle) * THROW_VELOCITY;
-  float vy = -sin(angle) * THROW_VELOCITY;
+  float angle = gameRandom.randf(90.0f - 15.0f, 90.0f + 15.0f) * (math::PI / 180.0f);
+  float vx = cosf(angle) * THROW_VELOCITY;
+  float vy = -sinf(angle) * THROW_VELOCITY;
 
   SoundManager::current()->play("sounds/dartfire.wav", get_pos());
   Sector::current()->add_object(std::make_shared<MoleRock>(bbox.get_middle(), Vector(vx, vy), this));

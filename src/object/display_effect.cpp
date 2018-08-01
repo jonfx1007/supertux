@@ -16,7 +16,6 @@
 
 #include "object/display_effect.hpp"
 
-#include "scripting/squirrel_util.hpp"
 #include "supertux/globals.hpp"
 #include "video/drawing_context.hpp"
 
@@ -34,7 +33,7 @@ DisplayEffect::DisplayEffect(const std::string& name_) :
   black(false),
   borders(false)
 {
-  this->name = name_;
+  name = name_;
 }
 
 DisplayEffect::~DisplayEffect()
@@ -111,15 +110,20 @@ DisplayEffect::draw(DrawingContext& context)
           assert(false);
       }
     }
-    context.draw_filled_rect(Vector(0, 0), Vector(SCREEN_WIDTH, SCREEN_HEIGHT),
-                             Color(0, 0, 0, alpha), LAYER_GUI-10);
+    context.color().draw_filled_rect(Vector(0, 0), Vector(static_cast<float>(context.get_width()),
+                                                          static_cast<float>(context.get_height())),
+                                       Color(0, 0, 0, alpha), LAYER_GUI-10);
   }
 
   if (borders) {
-    context.draw_filled_rect(Vector(0, 0), Vector(SCREEN_WIDTH, border_size),
-                             Color(0, 0, 0, 1.0f), LAYER_GUI-10);
-    context.draw_filled_rect(Vector(0, SCREEN_HEIGHT - border_size), Vector(SCREEN_WIDTH, border_size),
-                             Color(0, 0, 0, 1.0f), LAYER_GUI-10);
+    context.color().draw_filled_rect(Vector(0, 0), Vector(static_cast<float>(context.get_width()),
+                                                          static_cast<float>(border_size)),
+                                       Color(0, 0, 0, 1.0f), LAYER_GUI-10);
+    context.color().draw_filled_rect(Vector(0,
+                                            static_cast<float>(context.get_height()) - border_size),
+                                     Vector(static_cast<float>(context.get_width()),
+                                            static_cast<float>(border_size)),
+                                       Color(0, 0, 0, 1.0f), LAYER_GUI-10);
   }
 
   context.pop_transform();
@@ -138,7 +142,7 @@ void
 DisplayEffect::fade_in(float fadetime)
 {
   black = false;
-  this->screen_fadetime = fadetime;
+  screen_fadetime = fadetime;
   screen_fading = fadetime;
   screen_fade = FADE_IN;
 }

@@ -14,6 +14,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "supertux/flip_level_transformer.hpp"
+
 #include "badguy/badguy.hpp"
 #include "object/block.hpp"
 #include "object/camera.hpp"
@@ -21,7 +23,6 @@
 #include "object/platform.hpp"
 #include "object/player.hpp"
 #include "object/tilemap.hpp"
-#include "supertux/flip_level_transformer.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/spawn_point.hpp"
 
@@ -93,8 +94,8 @@ FlipLevelTransformer::transform_path(float height, float obj_height, Path& path)
 void
 FlipLevelTransformer::transform_tilemap(float height, TileMap& tilemap)
 {
-  for(size_t x = 0; x < tilemap.get_width(); ++x) {
-    for(size_t y = 0; y < tilemap.get_height()/2; ++y) {
+  for(int x = 0; x < tilemap.get_width(); ++x) {
+    for(int y = 0; y < tilemap.get_height()/2; ++y) {
       // swap tiles
       int y2 = tilemap.get_height()-1-y;
       uint32_t t1 = tilemap.get_tile_id(x, y);
@@ -107,7 +108,7 @@ FlipLevelTransformer::transform_tilemap(float height, TileMap& tilemap)
   Vector offset = tilemap.get_offset();
   offset.y = height - offset.y - tilemap.get_bbox().get_height();
   tilemap.set_offset(offset);
-  auto path = tilemap.get_path().get();
+  auto path = tilemap.get_path();
   if (path)
     transform_path(height, tilemap.get_bbox().get_height(), *path);
 }
@@ -145,7 +146,7 @@ FlipLevelTransformer::transform_flower(Flower& flower)
 void
 FlipLevelTransformer::transform_platform(float height, Platform& platform)
 {
-  transform_path(height, platform.get_bbox().get_height(), platform.get_path());
+  transform_path(height, platform.get_bbox().get_height(), *(platform.get_path()));
 }
 
 void

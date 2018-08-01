@@ -17,16 +17,17 @@
 #ifndef HEADER_SUPERTUX_BADGUY_BOMB_HPP
 #define HEADER_SUPERTUX_BADGUY_BOMB_HPP
 
-#include "audio/sound_source.hpp"
 #include "badguy/badguy.hpp"
 #include "object/portable.hpp"
+
+class SoundSource;
 
 class Bomb : public BadGuy,
              public Portable
 {
 public:
   Bomb(const Vector& pos, Direction dir, std::string custom_sprite = "images/creatures/mr_bomb/bomb.sprite" );
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 

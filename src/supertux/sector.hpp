@@ -21,11 +21,9 @@
 #include <squirrel.h>
 #include <stdint.h>
 
-#include "supertux/direction.hpp"
-#include "supertux/game_object_ptr.hpp"
-#include "util/writer.hpp"
-#include "video/color.hpp"
 #include "object/anchor_point.hpp"
+#include "supertux/game_object_ptr.hpp"
+#include "video/color.hpp"
 
 namespace collision {
 class Constraints;
@@ -45,6 +43,7 @@ class Portable;
 class DrawingContext;
 class DisplayEffect;
 class ReaderMapping;
+class Writer;
 
 enum MusicType {
   LEVEL_MUSIC,
@@ -57,10 +56,11 @@ enum MusicType {
  *
  * Sectors contain GameObjects, e.g. Badguys and Players.
  */
-class Sector
+class Sector final
 {
 public:
   friend class SectorParser;
+  friend class EditorSectorMenu;
 
 public:
   Sector(Level* parent);
@@ -104,7 +104,7 @@ public:
   void add_object(GameObjectPtr object);
 
   void set_name(const std::string& name_)
-  { this->name = name_; }
+  { name = name_; }
   const std::string& get_name() const
   { return name; }
 
@@ -119,7 +119,7 @@ public:
   MusicType get_music_type() const;
 
   int get_active_bullets() const
-  { return (int)bullets.size(); }
+  { return static_cast<int>(bullets.size()); }
   bool add_smoke_cloud(const Vector& pos);
 
   /** get currently activated sector. */
@@ -170,7 +170,7 @@ public:
    * returns a list of players currently in the sector
    */
   std::vector<Player*> get_players() const {
-    return std::vector<Player*>(1, this->player);
+    return std::vector<Player*>(1, player);
   }
   Player* get_nearest_player (const Vector& pos) const;
   Player* get_nearest_player (const Rectf& pos) const
@@ -202,7 +202,7 @@ public:
   /**
    * resize all tilemaps with given size
    */
-  void resize_sector(Size& old_size, Size& new_size);
+  void resize_sector(const Size& old_size, const Size& new_size, const Size& resize_offset);
 
   /**
    * globally changes solid tilemaps' tile ids
@@ -222,6 +222,15 @@ public:
   float get_ambient_red() const;
   float get_ambient_green() const;
   float get_ambient_blue() const;
+
+  /**
+   * Return the sector's current ambient light
+   */
+  Color get_ambient_light() const
+  {
+    return ambient_light;
+  }
+
   /**
    * Fades to the target ambient light
    */
@@ -232,10 +241,6 @@ public:
    */
   void set_gravity(float gravity);
   float get_gravity() const;
-
-  std::string* get_name_ptr() {return &name;}
-  std::string* get_init_script_ptr() {return &init_script;}
-  Color* get_ambient_light_ptr() {return &ambient_light;}
 
 private:
   uint32_t collision_tile_attributes(const Rectf& dest, const Vector& mov) const;
@@ -274,8 +279,6 @@ private:
   void collision_static_constrains(MovingObject& object);
 
   GameObjectPtr parse_object(const std::string& name, const ReaderMapping& lisp);
-
-  void fix_old_tiles();
 
   int calculate_foremost_layer() const;
 
@@ -334,14 +337,17 @@ public: // TODO make this private again
   static bool show_collrects;
   static bool draw_solids_only;
 
+public:
   GameObjects gameobjects;
   MovingObjects moving_objects;
   SpawnPoints spawnpoints;
   Portables portables;
 
   std::string music;
+private:
   float gravity;
 
+public:
   // some special objects, where we need direct access
   // (try to avoid accessing them directly)
   Player* player;

@@ -17,15 +17,10 @@
 #include "object/tilemap.hpp"
 #include "scripting/tilemap.hpp"
 
-#define NOIMPL      log_fatal << __PRETTY_FUNCTION__ << " not implemented."
-
 namespace scripting {
 
 TileMap::TileMap(::TileMap* tilemap_)
   : tilemap(tilemap_)
-{ }
-
-TileMap::~TileMap()
 { }
 
 void TileMap::goto_node(int node_no)
@@ -81,6 +76,11 @@ void TileMap::set_alpha(float alpha)
 float TileMap::get_alpha() const
 {
   return tilemap->get_alpha();
+}
+
+void TileMap::set_solid(bool solid)
+{
+  tilemap->set_solid(solid);
 }
 
 }

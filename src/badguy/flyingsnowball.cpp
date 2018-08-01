@@ -19,7 +19,7 @@
 #include "math/random_generator.hpp"
 #include "object/sprite_particle.hpp"
 #include "object/player.hpp"
-#include "supertux/object_factory.hpp"
+#include "sprite/sprite.hpp"
 #include "supertux/sector.hpp"
 
 namespace {
@@ -35,14 +35,6 @@ FlyingSnowBall::FlyingSnowBall(const ReaderMapping& reader) :
   physic.enable_gravity(true);
 }
 
-FlyingSnowBall::FlyingSnowBall(const Vector& pos) :
-  BadGuy(pos, "images/creatures/flying_snowball/flying_snowball.sprite"),
-  normal_propeller_speed(),
-  puff_timer()
-{
-  physic.enable_gravity(true);
-}
-
 void
 FlyingSnowBall::initialize()
 {
@@ -52,8 +44,8 @@ FlyingSnowBall::initialize()
 void
 FlyingSnowBall::activate()
 {
-  puff_timer.start(gameRandom.randf(PUFF_INTERVAL_MIN, PUFF_INTERVAL_MAX));
-  normal_propeller_speed = gameRandom.randf(0.95, 1.05);
+  puff_timer.start(static_cast<float>(gameRandom.randf(PUFF_INTERVAL_MIN, PUFF_INTERVAL_MAX)));
+  normal_propeller_speed = gameRandom.randf(0.95f, 1.05f);
 }
 
 bool
@@ -82,14 +74,14 @@ FlyingSnowBall::active_update(float elapsed_time)
   if (get_pos().y > start_position.y + 2*32) {
 
     // Flying too low - increased propeller speed
-    physic.set_acceleration_y(-grav*1.2);
+    physic.set_acceleration_y(-grav*1.2f);
 
-    physic.set_velocity_y(physic.get_velocity_y() * 0.99);
+    physic.set_velocity_y(physic.get_velocity_y() * 0.99f);
 
   } else if (get_pos().y < start_position.y - 2*32) {
 
     // Flying too high - decreased propeller speed
-    physic.set_acceleration_y(-grav*0.8);
+    physic.set_acceleration_y(-grav*0.8f);
 
     physic.set_velocity_y(physic.get_velocity_y() * 0.99f);
 
@@ -119,7 +111,7 @@ FlyingSnowBall::active_update(float elapsed_time)
                                                                    LAYER_OBJECTS-1));
     puff_timer.start(gameRandom.randf(PUFF_INTERVAL_MIN, PUFF_INTERVAL_MAX));
 
-    normal_propeller_speed = gameRandom.randf(0.95, 1.05);
+    normal_propeller_speed = gameRandom.randf(0.95f, 1.05f);
     physic.set_velocity_y(physic.get_velocity_y() - 50);
   }
 }

@@ -18,10 +18,9 @@
 
 #include "editor/editor.hpp"
 #include "object/player.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 Platform::Platform(const ReaderMapping& reader) :
   Platform(reader, "images/objects/flying_platform/flying_platform.sprite")
@@ -31,15 +30,13 @@ Platform::Platform(const ReaderMapping& reader) :
 Platform::Platform(const ReaderMapping& reader, const std::string& default_sprite) :
   MovingSprite(reader, default_sprite, LAYER_OBJECTS, COLGROUP_STATIC),
   ExposedObject<Platform, scripting::Platform>(this),
-  path(),
-  walker(),
+  PathObject(),
   speed(Vector(0,0)),
   automatic(false),
   player_contact(false),
   last_player_contact(false)
 {
   bool running = true;
-  reader.get("name", name);
   reader.get("running", running);
   if ((name.empty()) && (!running)) {
     automatic = true;

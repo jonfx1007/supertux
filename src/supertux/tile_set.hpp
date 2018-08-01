@@ -20,18 +20,17 @@
 #include <stdint.h>
 #include <string>
 
-#include "supertux/tile.hpp"
-#include "util/log.hpp"
 #include "video/color.hpp"
 #include "video/surface_ptr.hpp"
 
+class Canvas;
 class DrawingContext;
 class Tile;
+class Vector;
 
 class Tilegroup {
   public:
     Tilegroup();
-    ~Tilegroup();
     bool developers_group = false;
     std::string name;
     std::vector<int> tiles;
@@ -41,21 +40,16 @@ class TileSet
 {
 private:
   std::vector<std::unique_ptr<Tile> > m_tiles;
-  SurfacePtr notile_surface;
 
 public:
   TileSet(const std::string& filename);
   TileSet();
-  ~TileSet();
 
   std::vector<Tilegroup> tilegroups;
 
   void merge(const TileSet *tileset, uint32_t start, uint32_t end,
              uint32_t offset);
   void add_tile(int id, std::unique_ptr<Tile> tile);
-
-  void draw_tile(DrawingContext& context, uint32_t id, const Vector& pos,
-                 int z_pos, Color color = Color(1, 1, 1)) const;
 
   const Tile* get(const uint32_t id) const;
 
@@ -67,7 +61,7 @@ public:
 
   uint32_t get_max_tileid() const
   {
-    return m_tiles.size();
+    return static_cast<uint32_t>(m_tiles.size());
   }
 };
 

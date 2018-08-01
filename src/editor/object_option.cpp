@@ -14,10 +14,13 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "editor/object_option.hpp"
+
 #include <string>
 #include <vector>
 
-#include "editor/object_option.hpp"
+#include "util/gettext.hpp"
+#include "video/color.hpp"
 
 ObjectOption::ObjectOption(MenuItemKind ip_type, const std::string& text_, void* ip,
                            const std::string& key_, int flags_) :
@@ -28,26 +31,21 @@ ObjectOption::ObjectOption(MenuItemKind ip_type, const std::string& text_, void*
   flags(flags_),
   select()
 {
-  select.clear();
-}
-
-ObjectOption::~ObjectOption() {
-
 }
 
 const std::string
 ObjectOption::to_string() const {
   switch (type) {
     case MN_TEXTFIELD:
-      return *((std::string*)(option));
+      return *(static_cast<std::string*>(option));
     case MN_NUMFIELD:
-      return std::to_string(*((float*)(option)));
+      return std::to_string(*(static_cast<float*>(option)));
     case MN_INTFIELD:
-      return std::to_string(*((int*)(option)));
+      return std::to_string(*(static_cast<int*>(option)));
     case MN_TOGGLE:
-      return (*((bool*)(option))) ? _("true") : _("false");
+      return (*(static_cast<bool*>(option))) ? _("true") : _("false");
     case MN_STRINGSELECT: {
-      auto selected_id = (int*)option;
+      auto selected_id = static_cast<int*>(option);
       if ( *selected_id >= int(select.size()) || *selected_id < 0 ) {
         return _("invalid"); //Test whether the selected ID is valid
       } else {
@@ -55,18 +53,16 @@ ObjectOption::to_string() const {
       }
     }
     case MN_BADGUYSELECT:
-      return std::to_string(((std::vector<std::string>*)option)->size());
+      return std::to_string((static_cast<std::vector<std::string>*>(option))->size());
     case MN_COLOR:
-      return std::to_string(((Color*)option)->red) + " "
-             + std::to_string(((Color*)option)->green) + " "
-             + std::to_string(((Color*)option)->blue);
+      return (static_cast<Color*>(option))->to_string();
     case MN_SCRIPT:
-      if (((std::string*)option)->length()) {
+      if ((static_cast<std::string*>(option))->length()) {
         return "...";
       }
       return "";
     case MN_FILE:
-      return *((std::string*)(option));
+      return *(static_cast<std::string*>(option));
     default:
       return _("Unknown");
   }

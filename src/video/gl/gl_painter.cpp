@@ -17,14 +17,33 @@
 #include "video/gl/gl_painter.hpp"
 
 #include <algorithm>
+#include <math.h>
 
+#include "math/util.hpp"
+#include "supertux/globals.hpp"
 #include "video/drawing_request.hpp"
-#include "video/gl/gl_surface_data.hpp"
 #include "video/gl/gl_texture.hpp"
+#include "video/gl/gl_video_system.hpp"
+#include "video/surface.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 GLuint GLPainter::s_last_texture = static_cast<GLuint>(-1);
 
 namespace {
+
+inline Rectf calc_uv(const Surface& surface)
+{
+  const float uv_left = static_cast<float>(surface.get_x()) / static_cast<float>(surface.get_texture()->get_texture_width());
+  const float uv_top = static_cast<float>(surface.get_y()) / static_cast<float>(surface.get_texture()->get_texture_height());
+  const float uv_right = static_cast<float>(surface.get_x() + surface.get_width()) / static_cast<float>(surface.get_texture()->get_texture_width());
+  const float uv_bottom = static_cast<float>(surface.get_y() + surface.get_height()) / static_cast<float>(surface.get_texture()->get_texture_height());
+
+  return Rectf(surface.get_flipx() ? uv_right : uv_left,
+               uv_top,
+               surface.get_flipx() ? uv_left : uv_right,
+               uv_bottom);
+}
 
 inline void intern_draw(float left, float top, float right, float bottom,
                         float uv_left, float uv_top,
@@ -67,8 +86,8 @@ inline void intern_draw(float left, float top, float right, float bottom,
     float center_x = (left + right) / 2;
     float center_y = (top + bottom) / 2;
 
-    float sa = sinf(angle/180.0f*M_PI);
-    float ca = cosf(angle/180.0f*M_PI);
+    float sa = sinf(angle / 180.0f * math::PI);
+    float ca = cosf(angle / 180.0f * math::PI);
 
     left  -= center_x;
     right -= center_x;
@@ -102,6 +121,11 @@ inline void intern_draw(float left, float top, float right, float bottom,
 
 } // namespace
 
+GLPainter::GLPainter(GLVideoSystem& video_system) :
+  m_video_system(video_system)
+{
+}
+
 void
 GLPainter::draw_surface(const DrawingRequest& request)
 {
@@ -115,11 +139,7 @@ GLPainter::draw_surface(const DrawingRequest& request)
   {
     return;
   }
-  GLSurfaceData *surface_data = static_cast<GLSurfaceData*>(surface->get_surface_data());
-  if(surface_data == NULL)
-  {
-    return;
-  }
+  Rectf uv = calc_uv(*surface);
 
   GLuint th = gltexture->get_handle();
   if (th != s_last_texture) {
@@ -127,12 +147,12 @@ GLPainter::draw_surface(const DrawingRequest& request)
     glBindTexture(GL_TEXTURE_2D, th);
   }
   intern_draw(request.pos.x, request.pos.y,
-              request.pos.x + surface->get_width(),
-              request.pos.y + surface->get_height(),
-              surface_data->get_uv_left(),
-              surface_data->get_uv_top(),
-              surface_data->get_uv_right(),
-              surface_data->get_uv_bottom(),
+              request.pos.x + static_cast<float>(surface->get_width()),
+              request.pos.y + static_cast<float>(surface->get_height()),
+              uv.get_left(),
+              uv.get_top(),
+              uv.get_right(),
+              uv.get_bottom(),
               request.angle,
               request.alpha,
               request.color,
@@ -147,15 +167,16 @@ GLPainter::draw_surface_part(const DrawingRequest& request)
     = static_cast<SurfacePartRequest*>(request.request_data);
   const Surface* surface = surfacepartrequest->surface;
   std::shared_ptr<GLTexture> gltexture = std::dynamic_pointer_cast<GLTexture>(surface->get_texture());
-  GLSurfaceData *surface_data = reinterpret_cast<GLSurfaceData *>(surface->get_surface_data());
 
-  float uv_width = surface_data->get_uv_right() - surface_data->get_uv_left();
-  float uv_height = surface_data->get_uv_bottom() - surface_data->get_uv_top();
+  Rectf uv = calc_uv(*surface);
 
-  float uv_left = surface_data->get_uv_left() + (uv_width * surfacepartrequest->srcrect.p1.x) / surface->get_width();
-  float uv_top = surface_data->get_uv_top() + (uv_height * surfacepartrequest->srcrect.p1.y) / surface->get_height();
-  float uv_right = surface_data->get_uv_left() + (uv_width * surfacepartrequest->srcrect.p2.x) / surface->get_width();
-  float uv_bottom = surface_data->get_uv_top() + (uv_height * surfacepartrequest->srcrect.p2.y) / surface->get_height();
+  float uv_width = uv.get_right() - uv.get_left();
+  float uv_height = uv.get_bottom() - uv.get_top();
+
+  float uv_left = uv.get_left() + (uv_width * surfacepartrequest->srcrect.p1.x) / static_cast<float>(surface->get_width());
+  float uv_top = uv.get_top() + (uv_height * surfacepartrequest->srcrect.p1.y) / static_cast<float>(surface->get_height());
+  float uv_right = uv.get_left() + (uv_width * surfacepartrequest->srcrect.p2.x) / static_cast<float>(surface->get_width());
+  float uv_bottom = uv.get_top() + (uv_height * surfacepartrequest->srcrect.p2.y) / static_cast<float>(surface->get_height());
 
   GLuint th = gltexture->get_handle();
   if (th != s_last_texture) {
@@ -255,13 +276,13 @@ GLPainter::draw_filled_rect(const DrawingRequest& request)
                 request.pos.y + fillrectrequest->size.y - radius);
 
     int n = 8;
-    int p = 0;
+    size_t p = 0;
     std::vector<float> vertices((n+1) * 4 * 2);
 
     for(int i = 0; i <= n; ++i)
     {
-      float x = sinf(i * (M_PI/2) / n) * radius;
-      float y = cosf(i * (M_PI/2) / n) * radius;
+      float x = sinf(static_cast<float>(i) * math::PI_2 / static_cast<float>(n)) * radius;
+      float y = cosf(static_cast<float>(i) * math::PI_2 / static_cast<float>(n)) * radius;
 
       vertices[p++] = irect.get_left() - x;
       vertices[p++] = irect.get_top()  - y;
@@ -272,8 +293,8 @@ GLPainter::draw_filled_rect(const DrawingRequest& request)
 
     for(int i = 0; i <= n; ++i)
     {
-      float x = cosf(i * (M_PI/2) / n) * radius;
-      float y = sinf(i * (M_PI/2) / n) * radius;
+      float x = cosf(static_cast<float>(i) * math::PI_2 / static_cast<float>(n)) * radius;
+      float y = sinf(static_cast<float>(i) * math::PI_2 / static_cast<float>(n)) * radius;
 
       vertices[p++] = irect.get_left()   - x;
       vertices[p++] = irect.get_bottom() + y;
@@ -283,7 +304,7 @@ GLPainter::draw_filled_rect(const DrawingRequest& request)
     }
 
     glVertexPointer(2, GL_FLOAT, 0, &*vertices.begin());
-    glDrawArrays(GL_TRIANGLE_STRIP, 0,  vertices.size()/2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0,  static_cast<GLsizei>(vertices.size() / 2));
   }
   else
   {
@@ -328,36 +349,40 @@ GLPainter::draw_inverse_ellipse(const DrawingRequest& request)
   float vertices[points * 2];
   int   p = 0;
 
+  const Viewport& viewport = m_video_system.get_viewport();
+  float screen_width = static_cast<float>(viewport.get_screen_width());
+  float screen_height = static_cast<float>(viewport.get_screen_height());
+
   // Bottom
-  vertices[p++] = SCREEN_WIDTH; vertices[p++] = SCREEN_HEIGHT;
-  vertices[p++] = 0;            vertices[p++] = SCREEN_HEIGHT;
+  vertices[p++] = screen_width; vertices[p++] = screen_height;
+  vertices[p++] = 0;            vertices[p++] = screen_height;
   vertices[p++] = x;            vertices[p++] = y+h;
 
   // Top
-  vertices[p++] = SCREEN_WIDTH; vertices[p++] = 0;
+  vertices[p++] = screen_width; vertices[p++] = 0;
   vertices[p++] = 0;            vertices[p++] = 0;
   vertices[p++] = x;            vertices[p++] = y-h;
 
   // Left
-  vertices[p++] = SCREEN_WIDTH; vertices[p++] = 0;
-  vertices[p++] = SCREEN_WIDTH; vertices[p++] = SCREEN_HEIGHT;
+  vertices[p++] = screen_width; vertices[p++] = 0;
+  vertices[p++] = screen_width; vertices[p++] = screen_height;
   vertices[p++] = x+w;          vertices[p++] = y;
 
   // Right
   vertices[p++] = 0;            vertices[p++] = 0;
-  vertices[p++] = 0;            vertices[p++] = SCREEN_HEIGHT;
+  vertices[p++] = 0;            vertices[p++] = screen_height;
   vertices[p++] = x-w;          vertices[p++] = y;
 
   for(int i = 0; i < slices; ++i)
   {
-    float ex1 = sinf(M_PI/2 / slices * i) * w;
-    float ey1 = cosf(M_PI/2 / slices * i) * h;
+    float ex1 = sinf(math::PI_2 / static_cast<float>(slices) * static_cast<float>(i)) * w;
+    float ey1 = cosf(math::PI_2 / static_cast<float>(slices) * static_cast<float>(i)) * h;
 
-    float ex2 = sinf(M_PI/2 / slices * (i+1)) * w;
-    float ey2 = cosf(M_PI/2 / slices * (i+1)) * h;
+    float ex2 = sinf(math::PI_2 / static_cast<float>(slices) * static_cast<float>(i+1)) * w;
+    float ey2 = cosf(math::PI_2 / static_cast<float>(slices) * static_cast<float>(i+1)) * h;
 
     // Bottom/Right
-    vertices[p++] = SCREEN_WIDTH; vertices[p++] = SCREEN_HEIGHT;
+    vertices[p++] = screen_width; vertices[p++] = screen_height;
     vertices[p++] = x + ex1;      vertices[p++] = y + ey1;
     vertices[p++] = x + ex2;      vertices[p++] = y + ey2;
 
@@ -367,12 +392,12 @@ GLPainter::draw_inverse_ellipse(const DrawingRequest& request)
     vertices[p++] = x - ex2;      vertices[p++] = y - ey2;
 
     // Top/Right
-    vertices[p++] = SCREEN_WIDTH; vertices[p++] = 0;
+    vertices[p++] = screen_width; vertices[p++] = 0;
     vertices[p++] = x + ex1;      vertices[p++] = y - ey1;
     vertices[p++] = x + ex2;      vertices[p++] = y - ey2;
 
     // Bottom/Left
-    vertices[p++] = 0;            vertices[p++] = SCREEN_HEIGHT;
+    vertices[p++] = 0;            vertices[p++] = screen_height;
     vertices[p++] = x - ex1;      vertices[p++] = y + ey1;
     vertices[p++] = x - ex2;      vertices[p++] = y + ey2;
   }

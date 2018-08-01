@@ -32,7 +32,7 @@ class TextObject : public GameObject,
 public:
   TextObject(const std::string& name = std::string());
   virtual ~TextObject();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 
@@ -45,14 +45,14 @@ public:
   bool is_visible();
 
   void set_anchor_point(AnchorPoint anchor_) {
-    this->anchor = anchor_;
+    anchor = anchor_;
   }
   AnchorPoint get_anchor_point() const {
     return anchor;
   }
 
   void set_pos(const Vector& pos_) {
-    this->pos = pos_;
+    pos = pos_;
   }
   const Vector& get_pos() const {
     return pos;
@@ -65,10 +65,10 @@ public:
   }
 
   void set_anchor_point(int anchor_) {
-    set_anchor_point((AnchorPoint) anchor_);
+    set_anchor_point(static_cast<AnchorPoint>(anchor_));
   }
   int get_anchor_point() {
-    return (int)this->anchor;
+    return static_cast<int>(anchor);
   }
 
   void draw(DrawingContext& context);

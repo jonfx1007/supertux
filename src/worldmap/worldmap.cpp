@@ -17,64 +17,43 @@
 
 #include "worldmap/worldmap.hpp"
 
-#include <config.h>
-
-#include <assert.h>
-#include <fstream>
-#include <iostream>
 #include <physfs.h>
-#include <sstream>
-#include <stdexcept>
-#include <vector>
 
 #include "audio/sound_manager.hpp"
 #include "control/input_manager.hpp"
-#include "gui/menu.hpp"
 #include "gui/menu_manager.hpp"
-#include "gui/mousecursor.hpp"
 #include "object/background.hpp"
 #include "object/decal.hpp"
 #include "object/tilemap.hpp"
-#include "physfs/physfs_file_system.hpp"
 #include "physfs/ifile_streambuf.hpp"
-#include "scripting/scripting.hpp"
-#include "scripting/squirrel_error.hpp"
-#include "scripting/squirrel_util.hpp"
+#include "physfs/physfs_file_system.hpp"
 #include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
-#include "supertux/game_session.hpp"
+#include "supertux/fadein.hpp"
 #include "supertux/game_manager.hpp"
+#include "supertux/game_session.hpp"
 #include "supertux/gameconfig.hpp"
-#include "supertux/globals.hpp"
+#include "supertux/level.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
-#include "supertux/menu/worldmap_menu.hpp"
-#include "supertux/player_status.hpp"
 #include "supertux/resources.hpp"
 #include "supertux/savegame.hpp"
 #include "supertux/screen_manager.hpp"
-#include "supertux/sector.hpp"
-#include "supertux/fadein.hpp"
 #include "supertux/shrinkfade.hpp"
-#include "supertux/spawn_point.hpp"
-#include "supertux/textscroller.hpp"
+#include "supertux/tile.hpp"
 #include "supertux/tile_manager.hpp"
-#include "supertux/tile_set.hpp"
-#include "supertux/world.hpp"
 #include "util/file_system.hpp"
-#include "util/gettext.hpp"
-#include "util/log.hpp"
 #include "util/reader.hpp"
-#include "util/reader_collection.hpp"
 #include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
-#include "video/drawing_context.hpp"
-#include "video/surface.hpp"
+#include "video/compositor.hpp"
+#include "video/video_system.hpp"
 #include "worldmap/level.hpp"
+#include "worldmap/spawn_point.hpp"
 #include "worldmap/special_tile.hpp"
 #include "worldmap/sprite_change.hpp"
+#include "worldmap/teleporter.hpp"
 #include "worldmap/tux.hpp"
-#include "worldmap/worldmap.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 static const float CAMERA_PAN_SPEED = 5.0;
 
@@ -104,6 +83,9 @@ WorldMap::WorldMap(const std::string& filename, Savegame& savegame, const std::s
   scripts(),
   ambient_light( 1.0f, 1.0f, 1.0f, 1.0f ),
   force_spawnpoint(force_spawnpoint_),
+  main_is_default(true),
+  initial_fade_tilemap(),
+  fade_direction(),
   in_level(false),
   pan_pos(),
   panning(false)
@@ -173,23 +155,23 @@ WorldMap::try_unexpose(const GameObjectPtr& object)
 }
 
 void
-WorldMap::move_to_spawnpoint(const std::string& spawnpoint, bool pan)
+WorldMap::move_to_spawnpoint(const std::string& spawnpoint, bool pan, bool main_as_default)
 {
-  for(const auto& sp : spawn_points) {
-    if(sp->name == spawnpoint) {
-      Vector p = sp->pos;
-      tux->set_tile_pos(p);
-      tux->set_direction(sp->auto_dir);
-      if(pan) {
-        panning = true;
-        pan_pos = get_camera_pos_for_tux();
-        clamp_camera_position(pan_pos);
-      }
-      return;
+  auto sp = get_spawnpoint_by_name(spawnpoint);
+  if(sp != NULL) {
+    Vector p = sp->pos;
+    tux->set_tile_pos(p);
+    tux->set_direction(sp->auto_dir);
+    if(pan) {
+      panning = true;
+      pan_pos = get_camera_pos_for_tux();
+      clamp_camera_position(pan_pos);
     }
+    return;
   }
+
   log_warning << "Spawnpoint '" << spawnpoint << "' not found." << std::endl;
-  if (spawnpoint != "main") {
+  if (spawnpoint != "main" && main_as_default) {
     move_to_spawnpoint("main");
   }
 }
@@ -417,7 +399,8 @@ WorldMap::path_ok(const Direction& direction, const Vector& old_pos, Vector* new
                 && new_tile_data & Tile::WORLDMAP_NORTH);
 
       case D_NONE:
-        assert(!"path_ok() can't walk if direction is NONE");
+        log_warning << "path_ok() can't walk if direction is NONE" << std::endl;
+        assert(false);
     }
     return false;
   }
@@ -493,8 +476,8 @@ Vector
 WorldMap::get_camera_pos_for_tux() const {
   Vector camera_offset_;
   Vector tux_pos = tux->get_pos();
-  camera_offset_.x = tux_pos.x - SCREEN_WIDTH/2;
-  camera_offset_.y = tux_pos.y - SCREEN_HEIGHT/2;
+  camera_offset_.x = tux_pos.x - static_cast<float>(SCREEN_WIDTH) / 2.0f;
+  camera_offset_.y = tux_pos.y - static_cast<float>(SCREEN_HEIGHT) / 2.0f;
   return camera_offset_;
 }
 
@@ -506,15 +489,15 @@ WorldMap::clamp_camera_position(Vector& c) const
   if (c.y < 0)
     c.y = 0;
 
-  if (c.x > (int)get_width()*32 - SCREEN_WIDTH)
-    c.x = (int)get_width()*32 - SCREEN_WIDTH;
-  if (c.y > (int)get_height()*32 - SCREEN_HEIGHT)
-    c.y = (int)get_height()*32 - SCREEN_HEIGHT;
+  if (c.x > static_cast<float>(static_cast<int>(get_width()) * 32 - SCREEN_WIDTH))
+    c.x = static_cast<float>(static_cast<int>(get_width()) * 32 - SCREEN_WIDTH);
+  if (c.y > static_cast<float>(static_cast<int>(get_height())* 32 - SCREEN_HEIGHT))
+    c.y = static_cast<float>(static_cast<int>(get_height()) * 32 - SCREEN_HEIGHT);
 
   if (int(get_width()*32) < SCREEN_WIDTH)
-    c.x = get_width()*16.0 - SCREEN_WIDTH/2.0;
+    c.x = get_width()*16.f - static_cast<float>(SCREEN_WIDTH)/2.f;
   if (int(get_height()*32) < SCREEN_HEIGHT)
-    c.y = get_height()*16.0 - SCREEN_HEIGHT/2.0;
+    c.y = get_height()*16.f - static_cast<float>(SCREEN_HEIGHT)/2.f;
 }
 
 void
@@ -669,7 +652,7 @@ WorldMap::tile_data_at(const Vector& p) const
   int dirs = 0;
 
   for(const auto& tilemap : solid_tilemaps) {
-    const auto tile = tilemap->get_tile((int)p.x, (int)p.y);
+    const auto tile = tilemap->get_tile(static_cast<int>(p.x), static_cast<int>(p.y));
     int dirdata = tile->getData();
     dirs |= dirdata;
   }
@@ -727,10 +710,13 @@ WorldMap::at_teleporter(const Vector& pos) const
 }
 
 void
-WorldMap::draw(DrawingContext& context)
+WorldMap::draw(Compositor& compositor)
 {
-  if (int(get_width()*32) < SCREEN_WIDTH || int(get_height()*32) < SCREEN_HEIGHT)
-    context.draw_filled_rect(Vector(0, 0), Vector(SCREEN_WIDTH, SCREEN_HEIGHT),
+  auto& context = compositor.make_context();
+
+  if (int(get_width()*32) < context.get_width() || int(get_height()*32) < context.get_height())
+    context.color().draw_filled_rect(Vector(0, 0), Vector(static_cast<float>(context.get_width()),
+                                                          static_cast<float>(context.get_height())),
                              Color(0.0f, 0.0f, 0.0f, 1.0f), LAYER_BACKGROUND0);
 
   context.set_ambient_color( ambient_light );
@@ -755,12 +741,12 @@ WorldMap::draw(DrawingContext& context)
   int px = x * 32;
   int py = y * 32;
   const int W = 4;
-  if (data & Tile::WORLDMAP_NORTH)    context.draw_filled_rect(Rect(px + 16-W, py       , px + 16+W, py + 16-W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
-  if (data & Tile::WORLDMAP_SOUTH)    context.draw_filled_rect(Rect(px + 16-W, py + 16+W, px + 16+W, py + 32  ), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
-  if (data & Tile::WORLDMAP_EAST)     context.draw_filled_rect(Rect(px + 16+W, py + 16-W, px + 32  , py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
-  if (data & Tile::WORLDMAP_WEST)     context.draw_filled_rect(Rect(px       , py + 16-W, px + 16-W, py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
-  if (data & Tile::WORLDMAP_DIR_MASK) context.draw_filled_rect(Rect(px + 16-W, py + 16-W, px + 16+W, py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
-  if (data & Tile::WORLDMAP_STOP)     context.draw_filled_rect(Rect(px + 4   , py + 4   , px + 28  , py + 28  ), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_NORTH)    context.color().draw_filled_rect(Rect(px + 16-W, py       , px + 16+W, py + 16-W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_SOUTH)    context.color().draw_filled_rect(Rect(px + 16-W, py + 16+W, px + 16+W, py + 32  ), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_EAST)     context.color().draw_filled_rect(Rect(px + 16+W, py + 16-W, px + 32  , py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_WEST)     context.color().draw_filled_rect(Rect(px       , py + 16-W, px + 16-W, py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_DIR_MASK) context.color().draw_filled_rect(Rect(px + 16-W, py + 16-W, px + 16+W, py + 16+W), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
+  if (data & Tile::WORLDMAP_STOP)     context.color().draw_filled_rect(Rect(px + 4   , py + 4   , px + 28  , py + 28  ), Color(0.2f, 0.2f, 0.2f, 0.7f), LAYER_FOREGROUND1 + 1000);
   }
   }
   */
@@ -780,19 +766,19 @@ WorldMap::draw_status(DrawingContext& context)
   if (!tux->is_moving()) {
     for(const auto& level : levels) {
       if (level->pos == tux->get_tile_pos()) {
-        context.draw_text(Resources::normal_font, level->title,
-                          Vector(SCREEN_WIDTH/2,
-                                 SCREEN_HEIGHT - Resources::normal_font->get_height() - 10),
-                          ALIGN_CENTER, LAYER_HUD, level->title_color);
+        context.color().draw_text(Resources::normal_font, level->title,
+                                  Vector(static_cast<float>(context.get_width()) / 2.0f,
+                                         static_cast<float>(context.get_height()) - Resources::normal_font->get_height() - 10),
+                                  ALIGN_CENTER, LAYER_HUD, level->title_color);
 
         // if level is solved, draw level picture behind stats
         /*
           if (level->solved) {
           if (const Surface* picture = level->get_picture()) {
-          Vector pos = Vector(SCREEN_WIDTH - picture->get_width(), SCREEN_HEIGHT - picture->get_height());
+          Vector pos = Vector(context.get_width() - picture->get_width(), context.get_height() - picture->get_height());
           context.push_transform();
           context.set_alpha(0.5);
-          context.draw_surface(picture, pos, LAYER_FOREGROUND1-1);
+          context.color().draw_surface(picture, pos, LAYER_FOREGROUND1-1);
           context.pop_transform();
           }
           }
@@ -806,10 +792,10 @@ WorldMap::draw_status(DrawingContext& context)
       if (special_tile->pos == tux->get_tile_pos()) {
         /* Display an in-map message in the map, if any as been selected */
         if(!special_tile->map_message.empty() && !special_tile->passive_message)
-          context.draw_text(Resources::normal_font, special_tile->map_message,
-                            Vector(SCREEN_WIDTH/2,
-                                   SCREEN_HEIGHT - Resources::normal_font->get_height() - 60),
-                            ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::message_color);
+          context.color().draw_text(Resources::normal_font, special_tile->map_message,
+                                    Vector(static_cast<float>(context.get_width()) / 2.0f,
+                                           static_cast<float>(context.get_height()) - static_cast<float>(Resources::normal_font->get_height()) - 60.0f),
+                                    ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::message_color);
         break;
       }
     }
@@ -817,17 +803,19 @@ WorldMap::draw_status(DrawingContext& context)
     // display teleporter messages
     auto teleporter = at_teleporter(tux->get_tile_pos());
     if (teleporter && (!teleporter->message.empty())) {
-      Vector pos = Vector(SCREEN_WIDTH/2, SCREEN_HEIGHT - Resources::normal_font->get_height() - 30);
-      context.draw_text(Resources::normal_font, teleporter->message, pos, ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::teleporter_message_color);
+      Vector pos = Vector(static_cast<float>(context.get_width()) / 2.0f,
+                          static_cast<float>(context.get_height()) - Resources::normal_font->get_height() - 30.0f);
+      context.color().draw_text(Resources::normal_font, teleporter->message, pos, ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::teleporter_message_color);
     }
 
   }
 
   /* Display a passive message in the map, if needed */
   if(passive_message_timer.started())
-    context.draw_text(Resources::normal_font, passive_message,
-                      Vector(SCREEN_WIDTH/2, SCREEN_HEIGHT - Resources::normal_font->get_height() - 60),
-                      ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::message_color);
+    context.color().draw_text(Resources::normal_font, passive_message,
+                              Vector(static_cast<float>(context.get_width()) / 2.0f,
+                                     static_cast<float>(context.get_height()) - Resources::normal_font->get_height() - 60.0f),
+                              ALIGN_CENTER, LAYER_FOREGROUND1, WorldMap::message_color);
 
   context.pop_transform();
 }
@@ -843,8 +831,27 @@ WorldMap::setup()
 
   // if force_spawnpoint was set, move Tux there, then clear force_spawnpoint
   if (!force_spawnpoint.empty()) {
-    move_to_spawnpoint(force_spawnpoint);
+    move_to_spawnpoint(force_spawnpoint, false, main_is_default);
     force_spawnpoint = "";
+    main_is_default = true;
+  }
+
+  // If we specified a fade tilemap, let's fade it:
+  if (!initial_fade_tilemap.empty())
+  {
+    auto tilemap = get_tilemap_by_name(initial_fade_tilemap);
+    if(tilemap != NULL)
+    {
+      if(fade_direction == 0)
+      {
+        tilemap->fade(1.0, 1);
+      }
+      else
+      {
+        tilemap->fade(0.0, 1);
+      }
+    }
+    initial_fade_tilemap = "";
   }
 
   tux->setup();
@@ -903,7 +910,7 @@ WorldMap::save_state()
   using namespace scripting;
 
   HSQUIRRELVM vm = global_vm;
-  int oldtop = sq_gettop(vm);
+  SQInteger oldtop = sq_gettop(vm);
 
   try {
     // get state table
@@ -941,6 +948,28 @@ WorldMap::save_state()
       end_table(vm, "sprite-changes");
     }
 
+    // tilemap visibility
+    sq_pushstring(vm, "tilemaps", -1);
+    sq_newtable(vm);
+    for(const auto& object : game_objects)
+    {
+      auto tilemap = dynamic_cast<::TileMap*>(object.get());
+      if(tilemap && !tilemap->get_name().empty())
+      {
+        sq_pushstring(vm, tilemap->get_name().c_str(), -1);
+        sq_newtable(vm);
+        store_float(vm, "alpha", tilemap->get_alpha());
+        if(SQ_FAILED(sq_createslot(vm, -3)))
+        {
+          throw std::runtime_error("failed to create '" + name + "' table entry");
+        }
+      }
+    }
+    if(SQ_FAILED(sq_createslot(vm, -3)))
+    {
+      throw std::runtime_error("failed to create '" + name + "' table entry");
+    }
+
     // levels...
     begin_table(vm, "levels");
 
@@ -975,7 +1004,7 @@ WorldMap::load_state()
   using namespace scripting;
 
   HSQUIRRELVM vm = global_vm;
-  int oldtop = sq_gettop(vm);
+  SQInteger oldtop = sq_gettop(vm);
 
   try {
     // get state table
@@ -1025,6 +1054,50 @@ WorldMap::load_state()
 
     // leave levels table
     sq_pop(vm, 1);
+
+    try {
+      get_table_entry(vm, "tilemaps");
+      sq_pushnull(vm); // Null-iterator
+      while(SQ_SUCCEEDED(sq_next(vm, -2)))
+      {
+        const char* key; // Name of specific tilemap table
+        if(SQ_SUCCEEDED(sq_getstring(vm, -2, &key)))
+        {
+          auto tilemap = get_tilemap_by_name(key);
+          if(tilemap != NULL)
+          {
+            sq_pushnull(vm); // null iterator (inner);
+            while(SQ_SUCCEEDED(sq_next(vm, -2)))
+            {
+              const char* property_key;
+              if(SQ_SUCCEEDED(sq_getstring(vm, -2, &property_key)))
+              {
+                auto propKey = std::string(property_key);
+                if(propKey == "alpha")
+                {
+                  float alpha_value = 1.0;
+                  if(SQ_SUCCEEDED(sq_getfloat(vm, -1, &alpha_value)))
+                  {
+                    tilemap->set_alpha(alpha_value);
+                  }
+                }
+              }
+              sq_pop(vm, 2); // Pop key/value from the stack
+            }
+            sq_pop(vm, 1); // Pop null iterator
+          }
+        }
+        sq_pop(vm, 2); // Pop key value pair from stack
+      }
+      sq_pop(vm, 1); // Pop null
+      sq_pop(vm, 1); // leave tilemaps table
+    }
+    catch(const scripting::SquirrelError&)
+    {
+      // Failed to get tilemap entry. This could indicate
+      // that no savable tilemaps have been found. In any
+      // case: This is not severe at all.
+    }
 
     if(sprite_changes.size() > 0)
     {
@@ -1120,7 +1193,7 @@ WorldMap::get_width() const
 {
   float width = 0;
   for(const auto& solids : solid_tilemaps) {
-    if (solids->get_width() > width) width = solids->get_width();
+    if (static_cast<float>(solids->get_width()) > width) width = static_cast<float>(solids->get_width());
   }
   return width;
 }
@@ -1130,9 +1203,24 @@ WorldMap::get_height() const
 {
   float height = 0;
   for(const auto& solids : solid_tilemaps) {
-    if (solids->get_height() > height) height = solids->get_height();
+    if (static_cast<float>(solids->get_height()) > height)
+      height = static_cast<float>(solids->get_height());
   }
   return height;
+}
+
+TileMap*
+WorldMap::get_tilemap_by_name(const std::string& tilemap_name) const
+{
+  for(const auto& object : game_objects)
+  {
+    auto tilemap = static_cast<TileMap*>(object.get());
+    if(tilemap && tilemap->get_name() == tilemap_name)
+    {
+      return tilemap;
+    }
+  }
+  return NULL;
 }
 
 } // namespace worldmap

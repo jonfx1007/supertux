@@ -18,7 +18,6 @@
 #define HEADER_SUPERTUX_VIDEO_SURFACE_HPP
 
 #include <string>
-#include <memory>
 
 #include "math/vector.hpp"
 #include "math/rect.hpp"
@@ -37,10 +36,9 @@ public:
   static SurfacePtr create(const std::string& file, const Rect& rect);
 
 private:
-  TexturePtr texture;
-  SurfaceData* surface_data;
-  Rect rect;
-  bool flipx;
+  TexturePtr m_texture;
+  Rect m_rect;
+  bool m_flipx;
 
 private:
   Surface(const std::string& file);

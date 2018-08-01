@@ -16,52 +16,26 @@
 
 #include "supertux/sector_parser.hpp"
 
-#include "supertux/sector.hpp"
+#include <physfs.h>
 
-#include "audio/sound_manager.hpp"
 #include "badguy/jumpy.hpp"
 #include "editor/editor.hpp"
 #include "editor/spawnpoint_marker.hpp"
 #include "editor/worldmap_objects.hpp"
-#include "math/aatriangle.hpp"
 #include "object/background.hpp"
-#include "object/bonus_block.hpp"
-#include "object/brick.hpp"
-#include "object/bullet.hpp"
 #include "object/camera.hpp"
 #include "object/cloud_particle_system.hpp"
-#include "object/coin.hpp"
-#include "object/display_effect.hpp"
-#include "object/ghost_particle_system.hpp"
 #include "object/gradient.hpp"
-#include "object/invisible_block.hpp"
-#include "object/particlesystem.hpp"
-#include "object/particlesystem_interactive.hpp"
-#include "object/player.hpp"
-#include "object/portable.hpp"
 #include "object/pulsing_light.hpp"
 #include "object/rain_particle_system.hpp"
-#include "object/smoke_cloud.hpp"
 #include "object/snow_particle_system.hpp"
-#include "object/text_object.hpp"
 #include "object/tilemap.hpp"
-#include "physfs/ifile_streambuf.hpp"
-#include "supertux/collision.hpp"
-#include "supertux/constants.hpp"
-#include "supertux/direction.hpp"
-#include "supertux/game_session.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/object_factory.hpp"
-#include "supertux/player_status.hpp"
-#include "supertux/savegame.hpp"
+#include "supertux/sector.hpp"
 #include "supertux/spawn_point.hpp"
 #include "supertux/tile.hpp"
-#include "supertux/tile_set.hpp"
 #include "supertux/tile_manager.hpp"
-#include "trigger/secretarea_trigger.hpp"
-#include "trigger/sequence_trigger.hpp"
-#include "util/file_system.hpp"
 #include "util/reader_collection.hpp"
 #include "util/reader_mapping.hpp"
 
@@ -168,7 +142,7 @@ SectorParser::parse(const ReaderMapping& sector)
 
   if(!has_background) {
     auto gradient = std::make_shared<Gradient>();
-    gradient->set_gradient(Color(0.3, 0.4, 0.75), Color(1, 1, 1));
+    gradient->set_gradient(Color(0.3f, 0.4f, 0.75f), Color(1.f, 1.f, 1.f));
     m_sector.add_object(gradient);
   }
 
@@ -277,8 +251,8 @@ SectorParser::parse_old_format(const ReaderMapping& reader)
     tilemap->set(width, height, tiles, LAYER_TILES, true);
 
     // replace tile id 112 (old invisible tile) with 1311 (new invisible tile)
-    for(size_t x=0; x < tilemap->get_width(); ++x) {
-      for(size_t y=0; y < tilemap->get_height(); ++y) {
+    for(int x=0; x < tilemap->get_width(); ++x) {
+      for(int y=0; y < tilemap->get_height(); ++y) {
         uint32_t id = tilemap->get_tile_id(x, y);
         if(id == 112)
           tilemap->change(x, y, 1311);
@@ -361,53 +335,57 @@ SectorParser::parse_old_format(const ReaderMapping& reader)
 void
 SectorParser::fix_old_tiles()
 {
-  for(const auto& solids : m_sector.solid_tilemaps) {
-    for(size_t x=0; x < solids->get_width(); ++x) {
-      for(size_t y=0; y < solids->get_height(); ++y) {
-        const auto& tile = solids->get_tile(x, y);
-
-        if (tile->get_object_name().length() > 0) {
-          Vector pos = solids->get_tile_position(x, y);
-          try {
-            GameObjectPtr object = ObjectFactory::instance().create(tile->get_object_name(), pos, AUTO, tile->get_object_data());
-            m_sector.add_object(object);
-            solids->change(x, y, 0);
-          } catch(std::exception& e) {
-            log_warning << e.what() << "" << std::endl;
-          }
-        }
-
-      }
-    }
-  }
-
   // add lights for special tiles
   for(const auto& obj : m_sector.gameobjects) {
     auto tm = dynamic_cast<TileMap*>(obj.get());
     if (!tm) continue;
-    for(size_t x=0; x < tm->get_width(); ++x) {
-      for(size_t y=0; y < tm->get_height(); ++y) {
-        const auto& tile = tm->get_tile(x, y);
-        uint32_t attributes = tile->getAttributes();
-        Vector pos = tm->get_tile_position(x, y);
-        Vector center = pos + Vector(16, 16);
 
-        if (attributes & Tile::FIRE) {
-          if (attributes & Tile::HURTS) {
-            // lava or lavaflow
-            // space lights a bit
-            if ((tm->get_tile(x-1, y)->getAttributes() != attributes || x%3 == 0)
-                 && (tm->get_tile(x, y-1)->getAttributes() != attributes || y%3 == 0)) {
-              float pseudo_rnd = (float)((int)pos.x % 10) / 10;
-              m_sector.add_object(std::make_shared<PulsingLight>(center, 1.0f + pseudo_rnd, 0.8f, 1.0f, Color(1.0f, 0.3f, 0.0f, 1.0f)));
+    for(int x=0; x < tm->get_width(); ++x)
+    {
+      for(int y=0; y < tm->get_height(); ++y)
+      {
+        const auto& tile = tm->get_tile(x, y);
+
+        if (!tile->get_object_name().empty())
+        {
+          // If a tile is associated with an object, insert that
+          // object and remove the tile
+          if (tile->get_object_name() == "decal" ||
+              tm->is_solid())
+          {
+            Vector pos = tm->get_tile_position(x, y);
+            try {
+              GameObjectPtr object = ObjectFactory::instance().create(tile->get_object_name(), pos, AUTO, tile->get_object_data());
+              m_sector.add_object(object);
+              tm->change(x, y, 0);
+            } catch(std::exception& e) {
+              log_warning << e.what() << "" << std::endl;
             }
-          } else {
-            // torch
-            float pseudo_rnd = (float)((int)pos.x % 10) / 10;
-            m_sector.add_object(std::make_shared<PulsingLight>(center, 1.0f + pseudo_rnd, 0.9f, 1.0f, Color(1.0f, 1.0f, 0.6f, 1.0f)));
           }
         }
+        else
+        {
+          // add lights for fire tiles
+          uint32_t attributes = tile->getAttributes();
+          Vector pos = tm->get_tile_position(x, y);
+          Vector center = pos + Vector(16, 16);
 
+          if (attributes & Tile::FIRE) {
+            if (attributes & Tile::HURTS) {
+              // lava or lavaflow
+              // space lights a bit
+              if ((tm->get_tile(x-1, y)->getAttributes() != attributes || x%3 == 0)
+                  && (tm->get_tile(x, y-1)->getAttributes() != attributes || y%3 == 0)) {
+                float pseudo_rnd = static_cast<float>(static_cast<int>(pos.x) % 10) / 10;
+                m_sector.add_object(std::make_shared<PulsingLight>(center, 1.0f + pseudo_rnd, 0.8f, 1.0f, Color(1.0f, 0.3f, 0.0f, 1.0f)));
+              }
+            } else {
+              // torch
+              float pseudo_rnd = static_cast<float>(static_cast<int>(pos.x) % 10) / 10;
+              m_sector.add_object(std::make_shared<PulsingLight>(center, 1.0f + pseudo_rnd, 0.9f, 1.0f, Color(1.0f, 1.0f, 0.6f, 1.0f)));
+            }
+          }
+        }
       }
     }
   }

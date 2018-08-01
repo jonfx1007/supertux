@@ -14,10 +14,12 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "object/growup.hpp"
+
 #include <math.h>
 
 #include "audio/sound_manager.hpp"
-#include "object/growup.hpp"
+#include "math/util.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
@@ -50,19 +52,16 @@ GrowUp::draw(DrawingContext& context)
 {
   if(physic.get_velocity_x() != 0) {
     //Set Sprite rotation angle
-    sprite->set_angle(get_pos().x * 360.0f / (32.0f * M_PI));
+    sprite->set_angle(get_pos().x * 360.0f / (32.0f * math::PI));
   }
   //Draw the Sprite.
   MovingSprite::draw(context);
   //Draw shade
-  shadesprite->draw(context, get_pos(), layer);
+  shadesprite->draw(context.color(), get_pos(), layer);
   //Draw the light when dark
   context.get_light( get_bbox().get_middle(), &light );
   if (light.red + light.green < 2.0){
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    lightsprite->draw(context, get_bbox().get_middle(), 0);
-    context.pop_target();
+    lightsprite->draw(context.light(), get_bbox().get_middle(), 0);
   }
 }
 

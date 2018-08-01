@@ -17,46 +17,36 @@
 #ifndef HEADER_SUPERTUX_VIDEO_GL_RENDERER_HPP
 #define HEADER_SUPERTUX_VIDEO_GL_RENDERER_HPP
 
-#include "math/size.hpp"
-#include "video/drawing_request.hpp"
+#include <SDL.h>
+
+#include "math/vector.hpp"
+#include "video/gl/gl_painter.hpp"
 #include "video/renderer.hpp"
 
-#include "SDL.h"
-#include <math.h>
+class GLVideoSystem;
+struct DrawingRequest;
 
 class GLRenderer : public Renderer
 {
 private:
-  SDL_Window* m_window;
-  SDL_GLContext m_glcontext;
-  SDL_Rect m_viewport;
-  Size m_desktop_size;
-  bool m_fullscreen_active;
 
 public:
-  GLRenderer();
+  GLRenderer(GLVideoSystem& video_system);
   ~GLRenderer();
 
-  void start_draw() override;
-  void end_draw() override;
-  void draw_surface(const DrawingRequest& request) override;
-  void draw_surface_part(const DrawingRequest& request) override;
-  void draw_gradient(const DrawingRequest& request) override;
-  void draw_filled_rect(const DrawingRequest& request) override;
-  void draw_inverse_ellipse(const DrawingRequest& request) override;
-  void draw_line(const DrawingRequest& request) override;
-  void draw_triangle(const DrawingRequest& request) override;
-  void do_take_screenshot() override;
-  void flip() override;
-  void resize(int w, int h) override;
-  void apply_config() override;
-  Vector to_logical(int physical_x, int physical_y) const override;
-  void set_gamma(float gamma) override;
+  virtual void start_draw() override;
+  virtual void end_draw() override;
 
-  SDL_Window* get_window() const override { return m_window; }
+  virtual GLPainter& get_painter() override { return m_painter; }
+
+  virtual void clear(const Color& color) override;
+
+  virtual void set_clip_rect(const Rect& rect) override;
+  virtual void clear_clip_rect() override;
 
 private:
-  void apply_video_mode();
+  GLVideoSystem& m_video_system;
+  GLPainter m_painter;
 
 private:
   GLRenderer(const GLRenderer&) = delete;

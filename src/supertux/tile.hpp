@@ -24,8 +24,9 @@
 
 #include "math/rectf.hpp"
 #include "video/color.hpp"
-#include "video/surface.hpp"
+#include "video/surface_ptr.hpp"
 
+class Canvas;
 class DrawingContext;
 
 class Tile
@@ -121,17 +122,14 @@ private:
 public:
   Tile();
   Tile(const std::vector<ImageSpec>& images, const std::vector<ImageSpec>& editor_images,
-       uint32_t attributes, uint32_t data, float fps, std::string obj_name = "",
-       std::string obj_data = "");
-  ~Tile();
+       uint32_t attributes, uint32_t data, float fps, const std::string& obj_name = "",
+       const std::string& obj_data = "");
 
   /** load Surfaces, if not already loaded */
   void load_images();
 
-  SurfacePtr get_current_image() const;
-
   /** Draw a tile on the screen */
-  void draw(DrawingContext& context, const Vector& pos, int z_pos, Color color = Color(1, 1, 1)) const;
+  void draw(Canvas& canvas, const Vector& pos, int z_pos, Color color = Color(1, 1, 1)) const;
 
   uint32_t getAttributes() const
   { return attributes; }
@@ -142,7 +140,7 @@ public:
   /** Checks the SLOPE attribute. Returns "true" if set, "false" otherwise. */
   bool is_slope() const
   {
-    return attributes & SLOPE;
+    return (attributes & SLOPE) != 0;
   }
 
   /** Determine the solidity of a tile. This version behaves correctly for
@@ -158,7 +156,7 @@ public:
    * method that takes position and movement into account (see above). */
   bool is_solid() const
   {
-    return attributes & SOLID;
+    return (attributes & SOLID) != 0;
   }
 
   /** Determines whether the tile's attributes are important to calculate the
@@ -169,14 +167,14 @@ public:
   /** Checks the UNISOLID attribute. Returns "true" if set, "false" otherwise. */
   bool is_unisolid() const
   {
-    return attributes & UNISOLID;
+    return (attributes & UNISOLID) != 0;
   }
 
-  std::string get_object_name() const {
+  const std::string& get_object_name() const {
     return object_name;
   }
 
-  std::string get_object_data() const {
+  const std::string& get_object_data() const {
     return object_data;
   }
 

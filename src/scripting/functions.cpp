@@ -21,25 +21,22 @@
 #include "object/camera.hpp"
 #include "object/player.hpp"
 #include "physfs/ifile_stream.hpp"
+#include "scripting/time_scheduler.hpp"
+#include "supertux/console.hpp"
 #include "supertux/fadeout.hpp"
+#include "supertux/game_manager.hpp"
 #include "supertux/game_session.hpp"
 #include "supertux/gameconfig.hpp"
-#include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/screen_manager.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/shrinkfade.hpp"
 #include "supertux/textscroller.hpp"
 #include "supertux/tile.hpp"
-#include "supertux/world.hpp"
-#include "util/gettext.hpp"
 #include "video/renderer.hpp"
 #include "video/video_system.hpp"
+#include "video/viewport.hpp"
 #include "worldmap/tux.hpp"
 #include "worldmap/worldmap.hpp"
-
-#include "scripting/squirrel_util.hpp"
-#include "scripting/time_scheduler.hpp"
 
 namespace scripting {
 
@@ -103,6 +100,16 @@ std::string translate(const std::string& text)
 std::string _(const std::string& text)
 {
   return translate(text);
+}
+
+std::string translate_plural(const std::string& text, const std::string& text_plural, int num)
+{
+  return g_dictionary_manager->get_dictionary().translate_plural(text, text_plural, num);
+}
+
+std::string __(const std::string& text, const std::string& text_plural, int num)
+{
+  return translate_plural(text, text_plural, num);
 }
 
 void display_text_file(const std::string& filename)
@@ -169,39 +176,39 @@ void debug_draw_editor_images(bool enable)
 
 void debug_worldmap_ghost(bool enable)
 {
-  using namespace worldmap;
+  auto worldmap = worldmap::WorldMap::current();
 
-  if(WorldMap::current() == NULL)
+  if(worldmap == NULL)
     throw std::runtime_error("Can't change ghost mode without active WorldMap");
 
-  WorldMap::current()->get_tux()->set_ghost_mode(enable);
+  worldmap->get_tux()->set_ghost_mode(enable);
 }
 
 void save_state()
 {
-  using worldmap::WorldMap;
+  auto worldmap = worldmap::WorldMap::current();
 
-  if (!WorldMap::current())
+  if (!worldmap)
   {
     throw std::runtime_error("Can't save state without active Worldmap");
   }
   else
   {
-    WorldMap::current()->save_state();
+    worldmap->save_state();
   }
 }
 
 void load_state()
 {
-  using worldmap::WorldMap;
+  auto worldmap = worldmap::WorldMap::current();
 
-  if (!WorldMap::current())
+  if (!worldmap)
   {
     throw std::runtime_error("Can't save state without active Worldmap");
   }
   else
   {
-    WorldMap::current()->load_state();
+    worldmap->load_state();
   }
 }
 
@@ -236,55 +243,56 @@ void play_sound(const std::string& filename)
 void grease()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player; // scripting::Player != ::Player
+  auto tux = ::Sector::current()->player; // scripting::Player != ::Player
   tux->get_physic().set_velocity_x(tux->get_physic().get_velocity_x()*3);
 }
 
 void invincible()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
+  auto tux = ::Sector::current()->player;
   tux->invincible_timer.start(10000);
 }
 
 void ghost()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
+  auto tux = ::Sector::current()->player;
   tux->set_ghost_mode(true);
 }
 
 void mortal()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
+  auto tux = ::Sector::current()->player;
   tux->invincible_timer.stop();
   tux->set_ghost_mode(false);
 }
 
 void restart()
 {
-  if (GameSession::current() == 0)
+  auto session = GameSession::current();
+  if (session == 0)
   {
     log_info << "No game session" << std::endl;
     return;
   }
-  GameSession::current()->restart_level();
+  session->restart_level();
 }
 
 void whereami()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
-  log_info << "You are at x " << ((int) tux->get_pos().x) << ", y " << ((int) tux->get_pos().y) << std::endl;
+  auto tux = ::Sector::current()->player;
+  log_info << "You are at x " << (static_cast<int>(tux->get_pos().x)) << ", y " << (static_cast<int>(tux->get_pos().y)) << std::endl;
 }
 
 void gotoend()
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
+  auto tux = ::Sector::current()->player;
   tux->move(Vector(
-              (::Sector::current()->get_width()) - (SCREEN_WIDTH*2), 0));
+              (::Sector::current()->get_width()) - (static_cast<float>(SCREEN_WIDTH) * 2.0f), 0));
   ::Sector::current()->camera->reset(
     Vector(tux->get_pos().x, tux->get_pos().y));
 }
@@ -292,7 +300,7 @@ void gotoend()
 void warp(float offset_x, float offset_y)
 {
   if (!validate_sector_player()) return;
-  ::Player* tux = ::Sector::current()->player;
+  auto tux = ::Sector::current()->player;
   tux->move(Vector(
               tux->get_pos().x + (offset_x*32), tux->get_pos().y - (offset_y*32)));
   ::Sector::current()->camera->reset(
@@ -302,12 +310,13 @@ void warp(float offset_x, float offset_y)
 void camera()
 {
   if (!validate_sector_player()) return;
-  log_info << "Camera is at " << ::Sector::current()->camera->get_translation().x << "," << ::Sector::current()->camera->get_translation().y << std::endl;
+  auto& cam_pos = ::Sector::current()->camera->get_translation();
+  log_info << "Camera is at " << cam_pos.x << "," << cam_pos.y << std::endl;
 }
 
 void set_gamma(float gamma)
 {
-  VideoSystem::current()->get_renderer().set_gamma(gamma);
+  VideoSystem::current()->set_gamma(gamma);
 }
 
 void quit()
@@ -338,16 +347,17 @@ void record_demo(const std::string& filename)
 
 void play_demo(const std::string& filename)
 {
-  if (GameSession::current() == 0)
+  auto session = GameSession::current();
+  if (session == 0)
   {
     log_info << "No game session" << std::endl;
     return;
   }
   // Reset random seed
-  g_config->random_seed = GameSession::current()->get_demo_random_seed(filename);
+  g_config->random_seed = session->get_demo_random_seed(filename);
   g_config->random_seed = gameRandom.srand(g_config->random_seed);
-  GameSession::current()->restart_level();
-  GameSession::current()->play_demo(filename);
+  session->restart_level();
+  session->play_demo(filename);
 }
 
 }

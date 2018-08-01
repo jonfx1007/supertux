@@ -17,13 +17,10 @@
 #include "editor/object_menu.hpp"
 
 #include "editor/editor.hpp"
-#include "editor/object_settings.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/moving_object.hpp"
 #include "supertux/game_object.hpp"
-#include "util/gettext.hpp"
-#include "video/color.hpp"
 
 ObjectMenu::ObjectMenu(GameObject *go) :
   object(go)
@@ -38,35 +35,35 @@ ObjectMenu::ObjectMenu(GameObject *go) :
 
     switch (oo.type) {
       case MN_TEXTFIELD:
-        add_textfield(oo.text, (std::string*)oo.option);
+        add_textfield(oo.text, static_cast<std::string*>(oo.option));
         break;
       case MN_NUMFIELD:
-        add_numfield(oo.text, (float*)oo.option);
+        add_numfield(oo.text, static_cast<float*>(oo.option));
         break;
       case MN_INTFIELD:
-        add_intfield(oo.text, (int*)oo.option);
+        add_intfield(oo.text, static_cast<int*>(oo.option));
         break;
       case MN_TOGGLE:
-        add_toggle(-1, oo.text, (bool*)oo.option);
+        add_toggle(-1, oo.text, static_cast<bool*>(oo.option));
         break;
       case MN_STRINGSELECT: {
-        auto selected_id = (int*)oo.option;
-        if ( *selected_id >= int(oo.select.size()) || *selected_id < 0 ) {
+        auto selected_id = static_cast<int*>(oo.option);
+        if ( *selected_id >= static_cast<int>(oo.select.size()) || *selected_id < 0 ) {
           *selected_id = 0; // Set the option to zero when not selectable
         }
         add_string_select(-1, oo.text, selected_id, oo.select);
       } break;
       case MN_BADGUYSELECT:
-        add_badguy_select(oo.text, (std::vector<std::string>*)oo.option);
+        add_badguy_select(oo.text, static_cast<std::vector<std::string>*>(oo.option));
         break;
       case MN_COLOR:
-        add_color(oo.text, (Color*)oo.option);
+        add_color(oo.text, static_cast<Color*>(oo.option));
         break;
       case MN_SCRIPT:
-        add_script(oo.text, (std::string*)oo.option);
+        add_script(oo.text, static_cast<std::string*>(oo.option));
         break;
       case MN_FILE:
-        add_file(oo.text, (std::string*)oo.option, oo.select);
+        add_file(oo.text, static_cast<std::string*>(oo.option), oo.select);
         break;
       case MN_REMOVE:
         add_entry(MNID_REMOVE, _("Remove"));

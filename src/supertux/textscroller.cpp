@@ -21,18 +21,18 @@
 #include "control/input_manager.hpp"
 #include "supertux/fadein.hpp"
 #include "supertux/fadeout.hpp"
-#include "supertux/gameconfig.hpp"
-#include "supertux/info_box_line.hpp"
 #include "supertux/globals.hpp"
+#include "supertux/info_box_line.hpp"
 #include "supertux/screen_manager.hpp"
-#include "supertux/resources.hpp"
+#include "util/log.hpp"
 #include "util/reader.hpp"
 #include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
+#include "video/compositor.hpp"
 #include "video/drawing_context.hpp"
-
-#include <sstream>
-#include <stdexcept>
+#include "video/surface.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 static const float DEFAULT_SPEED = 20;
 static const float LEFT_BORDER = 50;
@@ -70,7 +70,7 @@ TextScroller::TextScroller(const std::string& filename) :
         }
 
         // Split text string lines into a vector
-        lines = InfoBoxLine::split(text, SCREEN_WIDTH - 2*LEFT_BORDER);
+        lines = InfoBoxLine::split(text, static_cast<float>(SCREEN_WIDTH) - 2.0f * LEFT_BORDER);
       } else if (version == 2) {
         ReaderMapping content;
         if (!text_lisp.get("content", content)) {
@@ -206,18 +206,24 @@ TextScroller::update(float elapsed_time)
 }
 
 void
-TextScroller::draw(DrawingContext& context)
+TextScroller::draw(Compositor& compositor)
 {
-  context.draw_filled_rect(Vector(0, 0), Vector(SCREEN_WIDTH, SCREEN_HEIGHT),
+  auto& context = compositor.make_context();
+
+  context.color().draw_filled_rect(Vector(0, 0), Vector(static_cast<float>(context.get_width()), static_cast<float>(context.get_height())),
                            Color(0.6f, 0.7f, 0.8f, 0.5f), 0);
-  context.draw_surface_part(background, Rectf(0, 0, background->get_width(), background->get_height()),
-                            Rectf(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 0);
+  context.color().draw_surface_part(background, Rectf(0, 0,
+                                                      static_cast<float>(background->get_width()),
+                                                      static_cast<float>(background->get_height())),
+                                    Rectf(0, 0,
+                                          static_cast<float>(context.get_width()),
+                                          static_cast<float>(context.get_height())), 0);
 
 
-  float y = SCREEN_HEIGHT - scroll;
+  float y = static_cast<float>(context.get_height()) - scroll;
   for (auto& line : lines) {
-    if (y + line->get_height() >= 0 && SCREEN_HEIGHT - y >= 0) {
-      line->draw(context, Rectf(LEFT_BORDER, y, SCREEN_WIDTH - 2*LEFT_BORDER, y), LAYER_GUI);
+    if (y + line->get_height() >= 0 && static_cast<float>(context.get_height()) - y >= 0) {
+      line->draw(context, Rectf(LEFT_BORDER, y, static_cast<float>(context.get_width()) - 2*LEFT_BORDER, y), LAYER_GUI);
     }
 
     y += line->get_height();

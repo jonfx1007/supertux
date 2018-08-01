@@ -29,7 +29,6 @@ class Dart : public BadGuy
 public:
   Dart(const ReaderMapping& reader);
   Dart(const Vector& pos, Direction d, const BadGuy* parent);
-  ~Dart();
 
   void initialize();
   void activate();
@@ -50,6 +49,10 @@ public:
   }
 
   bool is_flammable() const;
+
+  bool is_hurtable() const {
+    return false;
+  }
 
   void stop_looping_sounds();
   void play_looping_sounds();

@@ -16,18 +16,14 @@
 
 #include "object/background.hpp"
 
-#include <iostream>
-#include <math.h>
-#include <stdexcept>
-
-#include "math/sizef.hpp"
-#include "scripting/squirrel_util.hpp"
+#include "editor/editor.hpp"
 #include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/log.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
+#include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 Background::Background() :
   ExposedObject<Background, scripting::Background>(this),
@@ -50,6 +46,7 @@ Background::Background() :
 }
 
 Background::Background(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<Background, scripting::Background>(this),
   alignment(NO_ALIGNMENT),
   layer(LAYER_BACKGROUND0),
@@ -72,9 +69,7 @@ Background::Background(const ReaderMapping& reader) :
   float py = 0;
   has_pos_x = reader.get("x", px);
   has_pos_y = reader.get("y", py);
-  this->pos = Vector(px,py);
-
-  reader.get("name", name, "");
+  pos = Vector(px,py);
 
   speed = 1.0;
   speed_y = 1.0;
@@ -212,7 +207,7 @@ Background::update(float delta)
 void
 Background::set_image(const std::string& name_)
 {
-  this->imagefile = name_;
+  imagefile = name_;
   image = Surface::create(name_);
   imagefile = name_;
 }
@@ -220,7 +215,7 @@ Background::set_image(const std::string& name_)
 void
 Background::set_image(const std::string& name_, float speed_)
 {
-  this->speed = speed_;
+  speed = speed_;
   set_image(name_);
 }
 
@@ -248,14 +243,15 @@ void
 Background::draw_image(DrawingContext& context, const Vector& pos_)
 {
   Sizef level(Sector::current()->get_width(), Sector::current()->get_height());
-  Sizef screen(SCREEN_WIDTH, SCREEN_HEIGHT);
+  Sizef screen(static_cast<float>(context.get_width()),
+               static_cast<float>(context.get_height()));
   Sizef parallax_image_size = (1.0f - speed) * screen + level * speed;
   Rectf cliprect = context.get_cliprect();
 
-  int start_x = static_cast<int>(floorf((cliprect.get_left()  - (pos_.x - image->get_width() /2.0f)) / image->get_width()));
-  int end_x   = static_cast<int>(ceilf((cliprect.get_right()  - (pos_.x + image->get_width() /2.0f)) / image->get_width()))+1;
-  int start_y = static_cast<int>(floorf((cliprect.get_top()   - (pos_.y - image->get_height()/2.0f)) / image->get_height()));
-  int end_y   = static_cast<int>(ceilf((cliprect.get_bottom() - (pos_.y + image->get_height()/2.0f)) / image->get_height()))+1;
+  int start_x = static_cast<int>(floorf((cliprect.get_left()  - (pos_.x - static_cast<float>(image->get_width()) /2.0f)) / static_cast<float>(image->get_width())));
+  int end_x   = static_cast<int>(ceilf((cliprect.get_right()  - (pos_.x + static_cast<float>(image->get_width()) /2.0f)) / static_cast<float>(image->get_width()))) + 1;
+  int start_y = static_cast<int>(floorf((cliprect.get_top()   - (pos_.y - static_cast<float>(image->get_height())/2.0f)) / static_cast<float>(image->get_height())));
+  int end_y   = static_cast<int>(ceilf((cliprect.get_bottom() - (pos_.y + static_cast<float>(image->get_height())/2.0f)) / static_cast<float>(image->get_height()))) + 1;
 
   switch(alignment)
   {
@@ -263,35 +259,35 @@ Background::draw_image(DrawingContext& context, const Vector& pos_)
       for(int y = start_y; y < end_y; ++y)
       {
         Vector p(pos_.x - parallax_image_size.width / 2.0f,
-                 pos_.y + y * image->get_height()  - image->get_height() / 2.0f);
-        context.draw_surface(image, p, layer);
+                 pos_.y + static_cast<float>(y) * static_cast<float>(image->get_height()) - static_cast<float>(image->get_height()) / 2.0f);
+        context.color().draw_surface(image, p, layer);
       }
       break;
 
     case RIGHT_ALIGNMENT:
       for(int y = start_y; y < end_y; ++y)
       {
-        Vector p(pos_.x + parallax_image_size.width / 2.0f - image->get_width(),
-                 pos_.y + y * image->get_height() - image->get_height() / 2.0f);
-        context.draw_surface(image, p, layer);
+        Vector p(pos_.x + parallax_image_size.width / 2.0f - static_cast<float>(image->get_width()),
+                 pos_.y + static_cast<float>(y) * static_cast<float>(image->get_height()) - static_cast<float>(image->get_height()) / 2.0f);
+        context.color().draw_surface(image, p, layer);
       }
       break;
 
     case TOP_ALIGNMENT:
       for(int x = start_x; x < end_x; ++x)
       {
-        Vector p(pos_.x + x * image->get_width() - image->get_width() / 2.0f,
+        Vector p(pos_.x + static_cast<float>(x) * static_cast<float>(image->get_width()) - static_cast<float>(image->get_width()) / 2.0f,
                  pos_.y - parallax_image_size.height / 2.0f);
-        context.draw_surface(image, p, layer);
+        context.color().draw_surface(image, p, layer);
       }
       break;
 
     case BOTTOM_ALIGNMENT:
       for(int x = start_x; x < end_x; ++x)
       {
-        Vector p(pos_.x + x * image->get_width()  - image->get_width() / 2.0f,
-                 pos_.y - image->get_height() + parallax_image_size.height / 2.0f);
-        context.draw_surface(image, p, layer);
+        Vector p(pos_.x + static_cast<float>(x) * static_cast<float>(image->get_width()) - static_cast<float>(image->get_width()) / 2.0f,
+                 pos_.y - static_cast<float>(image->get_height()) + parallax_image_size.height / 2.0f);
+        context.color().draw_surface(image, p, layer);
       }
       break;
 
@@ -299,20 +295,20 @@ Background::draw_image(DrawingContext& context, const Vector& pos_)
       for(int y = start_y; y < end_y; ++y)
         for(int x = start_x; x < end_x; ++x)
         {
-          Vector p(pos_.x + x * image->get_width()  - image->get_width()/2,
-                   pos_.y + y * image->get_height() - image->get_height()/2);
+          Vector p(pos_.x + static_cast<float>(x) * static_cast<float>(image->get_width()) - static_cast<float>(image->get_width()) / 2.0f,
+                   pos_.y + static_cast<float>(y) * static_cast<float>(image->get_height()) - static_cast<float>(image->get_height()) / 2.0f);
 
           if (image_top.get() != NULL && (y < 0))
           {
-            context.draw_surface(image_top, p, layer);
+            context.color().draw_surface(image_top, p, layer);
           }
           else if (image_bottom.get() != NULL && (y > 0))
           {
-            context.draw_surface(image_bottom, p, layer);
+            context.color().draw_surface(image_bottom, p, layer);
           }
           else
           {
-            context.draw_surface(image, p, layer);
+            context.color().draw_surface(image, p, layer);
           }
         }
       break;
@@ -322,12 +318,16 @@ Background::draw_image(DrawingContext& context, const Vector& pos_)
 void
 Background::draw(DrawingContext& context)
 {
+  if(Editor::is_active() && !EditorInputCenter::render_background)
+    return;
+
   if(image.get() == NULL)
     return;
 
   Sizef level_size(Sector::current()->get_width(),
                    Sector::current()->get_height());
-  Sizef screen(SCREEN_WIDTH, SCREEN_HEIGHT);
+  Sizef screen(static_cast<float>(context.get_width()),
+               static_cast<float>(context.get_height()));
   Sizef translation_range = level_size - screen;
   Vector center_offset(context.get_translation().x - translation_range.width  / 2.0f,
                        context.get_translation().y - translation_range.height / 2.0f);

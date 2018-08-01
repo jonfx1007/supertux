@@ -25,10 +25,10 @@
 #include "object/camera.hpp"
 #include "sprite/sprite.hpp"
 #include "supertux/constants.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 namespace {
 const float MIN_INTENSITY = 0.8f;
@@ -112,8 +112,8 @@ MagicBlock::update(float elapsed_time)
   //Don't update if not, because there is no light off screen.
   float screen_left = Sector::current()->camera->get_translation().x;
   float screen_top = Sector::current()->camera->get_translation().y;
-  float screen_right = screen_left+ SCREEN_WIDTH;
-  float screen_bottom = screen_top + SCREEN_HEIGHT;
+  float screen_right = screen_left + static_cast<float>(SCREEN_WIDTH);
+  float screen_bottom = screen_top + static_cast<float>(SCREEN_HEIGHT);
   if((center.x > screen_right ) || ( center.y > screen_bottom) ||
      ( center.x < screen_left) || ( center.y < screen_top)) {
     switch_delay = SWITCH_DELAY;
@@ -178,7 +178,7 @@ MagicBlock::draw(DrawingContext& context){
   //Draw the Sprite.
   MovingSprite::draw(context);
   //Add the color.
-  context.draw_filled_rect( bbox, color, layer);
+  context.color().draw_filled_rect( bbox, color, layer);
 }
 
 bool

@@ -17,7 +17,7 @@
 #ifndef HEADER_SUPERTUX_OBJECT_RAINSPLASH_HPP
 #define HEADER_SUPERTUX_OBJECT_RAINSPLASH_HPP
 
-#include "sprite/sprite.hpp"
+#include "math/vector.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/game_object.hpp"
 
@@ -28,7 +28,7 @@ class RainSplash : public GameObject
 public:
   RainSplash(const Vector& pos, bool vertical);
   ~RainSplash();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const {
     return false;
   }
 

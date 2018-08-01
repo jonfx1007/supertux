@@ -17,6 +17,8 @@
 #ifndef HEADER_SUPERTUX_VIDEO_GL_GL_PAINTER_HPP
 #define HEADER_SUPERTUX_VIDEO_GL_GL_PAINTER_HPP
 
+#include "video/painter.hpp"
+
 #ifdef USE_GLBINDING
 #include <glbinding/gl/gl.h>
 using namespace gl;
@@ -26,23 +28,27 @@ using namespace gl;
 #include "SDL_opengl.h"
 #endif
 
+class GLVideoSystem;
 struct DrawingRequest;
 
-class GLPainter
+class GLPainter : public Painter
 {
 private:
   static GLuint s_last_texture;
 
-public:
-  GLPainter();
+private:
+  GLVideoSystem& m_video_system;
 
-  static void draw_surface(const DrawingRequest& request);
-  static void draw_surface_part(const DrawingRequest& request);
-  static void draw_gradient(const DrawingRequest& request);
-  static void draw_filled_rect(const DrawingRequest& request);
-  static void draw_inverse_ellipse(const DrawingRequest& request);
-  static void draw_line(const DrawingRequest& request);
-  static void draw_triangle(const DrawingRequest& request);
+public:
+  GLPainter(GLVideoSystem& video_system);
+
+  void draw_surface(const DrawingRequest& request);
+  void draw_surface_part(const DrawingRequest& request);
+  void draw_gradient(const DrawingRequest& request);
+  void draw_filled_rect(const DrawingRequest& request);
+  void draw_inverse_ellipse(const DrawingRequest& request);
+  void draw_line(const DrawingRequest& request);
+  void draw_triangle(const DrawingRequest& request);
 
 private:
   GLPainter(const GLPainter&) = delete;

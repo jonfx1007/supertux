@@ -14,21 +14,20 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "object/ambient_sound.hpp"
+
 #include <limits>
-#include <math.h>
 
 #include "audio/sound_manager.hpp"
 #include "audio/sound_source.hpp"
 #include "editor/editor.hpp"
-#include "object/ambient_sound.hpp"
 #include "object/camera.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 #include "video/drawing_context.hpp"
 
 AmbientSound::AmbientSound(const ReaderMapping& lisp) :
+  MovingObject(lisp),
   ExposedObject<AmbientSound, scripting::AmbientSound>(this),
   sample(),
   sound_source(),
@@ -45,7 +44,6 @@ AmbientSound::AmbientSound(const ReaderMapping& lisp) :
   group = COLGROUP_DISABLED;
 
   float w, h;
-  lisp.get("name" , name, "");
   lisp.get("x", bbox.p1.x, 0);
   lisp.get("y", bbox.p1.y, 0);
   lisp.get("width" , w, 32);
@@ -216,7 +214,7 @@ AmbientSound::update(float deltat)
         latency=0;
       }
       else // set a reasonable latency
-        latency=(int)(0.001/distance_factor);
+        latency = static_cast<int>(0.001/distance_factor);
       //(int)(10*((sqrdistance-silence_distance)/silence_distance));
     }
   }
@@ -263,7 +261,7 @@ void
 AmbientSound::draw(DrawingContext& context)
 {
   if (Editor::is_active()) {
-    context.draw_filled_rect(bbox, Color(0.0f, 0.0f, 1.0f, 0.6f),
+    context.color().draw_filled_rect(bbox, Color(0.0f, 0.0f, 1.0f, 0.6f),
                              0.0f, LAYER_OBJECTS);
   }
 }

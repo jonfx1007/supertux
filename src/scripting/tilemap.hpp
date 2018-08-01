@@ -28,7 +28,6 @@ class TileMap
 public:
 #ifndef SCRIPTING_API
   TileMap(::TileMap* tilemap);
-  ~TileMap();
 #endif
 
   /** Move tilemap until at given node, then stop */
@@ -73,6 +72,12 @@ public:
    * Return tilemap's opacity. Note that while the tilemap is fading in or out, this will return the current alpha value, not the target alpha.
    */
   float get_alpha() const;
+
+  /**
+   * Switch tilemap's real solidity to the given bool. Note that effective
+   * solidity is also influenced by the alpha of the tilemap.
+   */
+  void set_solid(bool solid); /**< true: make tilemap solid, false: disable solidity */
 
 #ifndef SCRIPTING_API
   ::TileMap* tilemap;

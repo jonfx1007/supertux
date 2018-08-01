@@ -22,6 +22,7 @@
 
 #include "util/log.hpp"
 #include "util/reader_mapping.hpp"
+#include "video/surface.hpp"
 
 SpriteData::Action::Action() :
   name(),
@@ -34,10 +35,6 @@ SpriteData::Action::Action() :
   loops(-1),
   has_custom_loops(false),
   surfaces()
-{
-}
-
-SpriteData::Action::~Action()
 {
 }
 
@@ -57,10 +54,6 @@ SpriteData::SpriteData(const ReaderMapping& lisp, const std::string& basedir) :
   }
   if(actions.empty())
     throw std::runtime_error("Error: Sprite without actions.");
-}
-
-SpriteData::~SpriteData()
-{
 }
 
 void
@@ -112,8 +105,8 @@ SpriteData::parse_action(const ReaderMapping& lisp, const std::string& basedir)
       for(const auto& surf : act_tmp->surfaces) {
         auto surface = surf->clone();
         surface->hflip();
-        max_w = std::max(max_w, (float) surface->get_width());
-        max_h = std::max(max_h, (float) surface->get_height());
+        max_w = std::max(max_w, static_cast<float>(surface->get_width()));
+        max_h = std::max(max_h, static_cast<float>(surface->get_height()));
         action->surfaces.push_back(surface);
       }
       if (action->hitbox_w < 1) action->hitbox_w = max_w - action->x_offset;
@@ -131,8 +124,8 @@ SpriteData::parse_action(const ReaderMapping& lisp, const std::string& basedir)
       float max_h = 0;
       for(const auto& image : images) {
         auto surface = Surface::create(basedir + image);
-        max_w = std::max(max_w, (float) surface->get_width());
-        max_h = std::max(max_h, (float) surface->get_height());
+        max_w = std::max(max_w, static_cast<float>(surface->get_width()));
+        max_h = std::max(max_h, static_cast<float>(surface->get_height()));
         action->surfaces.push_back(surface);
       }
       if (action->hitbox_w < 1) action->hitbox_w = max_w - action->x_offset;

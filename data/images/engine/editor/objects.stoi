@@ -118,6 +118,9 @@
     (class "totem")
     (icon "images/creatures/totem/walking1.png"))
   (object
+    (class "walking_candle")
+    (icon "images/creatures/mr_candle/mr-candle-left-1.png"))
+  (object
     (class "walkingleaf")
     (icon "images/creatures/walkingleaf/left-0.png"))
   (object
@@ -140,9 +143,6 @@
   (object
     (class "leafshot")
     (icon "images/creatures/leafshot/left-1.png"))
-  (object
-    (class "mole_rock")
-    (icon "images/creatures/mole/mole-rock.png"))
   (object
     (class "skydive")
     (icon "images/creatures/skydive/skydive.png"))

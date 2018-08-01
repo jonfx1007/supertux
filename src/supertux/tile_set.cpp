@@ -18,8 +18,10 @@
 
 #include "editor/editor.hpp"
 #include "supertux/resources.hpp"
+#include "supertux/tile.hpp"
 #include "supertux/tile_set_parser.hpp"
 #include "util/gettext.hpp"
+#include "util/log.hpp"
 #include "video/drawing_context.hpp"
 #include "video/surface.hpp"
 
@@ -29,10 +31,6 @@ Tilegroup::Tilegroup() :
   tiles()
 {
   tiles.clear();
-}
-
-Tilegroup::~Tilegroup() {
-
 }
 
 /*
@@ -52,7 +50,6 @@ TileSet::TileSet(const std::string& filename) :
 */
 TileSet::TileSet() :
   m_tiles(1),
-  notile_surface(Surface::create("images/tiles/auxiliary/notile.png")),
   tilegroups()
 {
   m_tiles[0] = std::unique_ptr<Tile>(new Tile);
@@ -97,10 +94,6 @@ TileSet::TileSet(const std::string& filename) :
   }
 }
 
-TileSet::~TileSet()
-{
-}
-
 void
 TileSet::add_tile(int id, std::unique_ptr<Tile> tile)
 {
@@ -131,28 +124,6 @@ TileSet::get(const uint32_t id) const
 //      log_warning << "Invalid tile: " << id << std::endl;
       return m_tiles[0].get();
     }
-  }
-}
-
-void
-TileSet::draw_tile(DrawingContext& context, uint32_t id, const Vector& pos,
-                   int z_pos, Color color) const
-{
-  if (id == 0) return;
-  Tile* tile;
-  if (id >= m_tiles.size()) {
-    tile = NULL;
-  } else {
-    tile = m_tiles[id].get();
-  }
-
-  if (tile) {
-    tile->load_images();
-    tile->draw(context, pos, z_pos, color);
-  } else if (Editor::is_active()) { // Draw a notile sign
-    context.draw_surface(notile_surface, pos, 0, color, Blend(), z_pos);
-    context.draw_text(Resources::small_font, std::to_string(id),
-                      pos + Vector(16, 16), ALIGN_CENTER, z_pos, color);
   }
 }
 
@@ -191,6 +162,8 @@ TileSet::add_unassigned_tilegroup()
   if(unassigned_group != NULL)
   {
     tilegroups.push_back(*unassigned_group);
+    delete unassigned_group;
+    unassigned_group = NULL;
   }
 }
 

@@ -17,16 +17,20 @@
 #ifndef HEADER_SUPERTUX_VIDEO_VIDEO_SYSTEM_HPP
 #define HEADER_SUPERTUX_VIDEO_VIDEO_SYSTEM_HPP
 
-#include <SDL.h>
 #include <string>
 
+#include "math/size.hpp"
 #include "util/currenton.hpp"
 #include "video/texture_ptr.hpp"
 
-class Renderer;
 class Lightmap;
+class Rect;
+class Renderer;
 class Surface;
 class SurfaceData;
+class Viewport;
+class Viewport;
+struct SDL_Surface;
 
 class VideoSystem : public Currenton<VideoSystem>
 {
@@ -49,12 +53,18 @@ public:
 
   virtual Renderer& get_renderer() const = 0;
   virtual Lightmap& get_lightmap() const = 0;
-  virtual TexturePtr new_texture(SDL_Surface *image) = 0;
-  virtual SurfaceData* new_surface_data(const Surface &surface) = 0;
-  virtual void free_surface_data(SurfaceData* surface_data) = 0;
 
+  virtual TexturePtr new_texture(SDL_Surface *image) = 0;
+
+  virtual const Viewport& get_viewport() const = 0;
   virtual void apply_config() = 0;
-  virtual void resize(int w, int h) = 0;
+  virtual void flip() = 0;
+  virtual void on_resize(int w, int h) = 0;
+
+  virtual void set_gamma(float gamma) = 0;
+  virtual void set_title(const std::string& title) = 0;
+  virtual void set_icon(SDL_Surface* icon) = 0;
+  virtual void do_take_screenshot() = 0;
 
 private:
   VideoSystem(const VideoSystem&) = delete;

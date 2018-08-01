@@ -38,7 +38,7 @@ env:
     - secure: "E++FmjzZZrvkJpUHZajLUaO1wd0QHcyVidVx8qVeGUJm/khCPBJuhkSe6R2BphcBeeAuhVlsXo26SWCAn89r2KT2OHB/lwtK2CWhO5vOl5bI5o4nFc+m55e2gDIebSBrXQPITEQJpQx1zBL4FVw/A2xQRl+IcjF/EiIzG8Znslc="
     # DOWNLOAD_APIKEY env var
     - secure: "ZfRyz4HyLtCtHSrCzB+VwdRP3QLbhcXiqsUAhBYNBz6fU8B4l7UchcRrTVsSQJMJeQQ3V7baJsqi4vAcxtd2aV/UDb82aWy9+lwexecjS+fVNh6Ace8j69PVeywpVVonY2Mk/8LeEAvBkjB1OeRlE+gMC08QwOiHqkR2qVcwNYA="
-    - GLBINDING_VERSION=2.1.3
+    - GLBINDING_VERSION=2.1.4
   matrix:
     - BUILD_TYPE="Debug"
     - BUILD_TYPE="Release"
@@ -58,12 +58,18 @@ before_install:
       brew upgrade cmake;
       brew install bash libogg libvorbis glew openal-soft sdl2 sdl2_image;
     fi
+
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8"; fi;
+      if [ "$CXX" = "clang++" ]; then export CXX="clang++-6.0" CC="clang-6.0"; fi;
+    fi
+
   # Try building with GLBinding
   # Note: glbindings ./configure needs to be run twice in order to generate a makefile
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$USE_GLBINDING" = "ON" ]; then
       wget https://github.com/cginternals/glbinding/archive/v$GLBINDING_VERSION.tar.gz -O - | tar xz;
       cd glbinding-$GLBINDING_VERSION && ./configure --prefix=/usr && ./configure --prefix=/usr;
-      cd build && make -j3 && sudo make install;
+      cd build && make && sudo make install;
       cd ../..;
     fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$USE_GLBINDING" = "ON" ]; then
@@ -73,11 +79,14 @@ before_install:
   - git fetch --unshallow
 
 script:
+  - cmake --version
+  - $CXX --version
+  - env
   - mkdir "build-$BUILD_TYPE"
   - cd "build-$BUILD_TYPE"
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DWARNINGS=ON -DWERROR=ON -DGLBINDING_ENABLED=$USE_GLBINDING -DBUILD_TESTS=ON -DCMAKE_INSTALL_MESSAGE=NEVER -DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_SUBDIR_BIN=bin -DINSTALL_SUBDIR_SHARE=share/supertux2
-  - make -j3
-  - make install DESTDIR="/tmp/supertux-$BUILD_TYPE"
+  - make VERBOSE=1
+  - make install DESTDIR="/tmp/supertux-$BUILD_TYPE" VERBOSE=1
   - ./test_supertux2
 
 after_success:
@@ -102,9 +111,14 @@ deploy:
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - llvm-toolchain-trusty-6.0
     packages:
     - cmake
     - build-essential
+    - clang-6.0
+    - g++-8
     - libc++-dev
     - libogg-dev
     - libvorbis-dev

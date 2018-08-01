@@ -24,7 +24,6 @@
 #include <sstream>
 #include <stdexcept>
 
-
 #ifdef USE_GLBINDING
 
 #include <glbinding/gl/gl.h>
@@ -47,6 +46,10 @@ using namespace gl;
 #  include <GL/glext.h>
 #endif
 
+#endif
+
+#ifdef GL_VERSION_ES_CM_1_0
+#  define glOrtho glOrthof
 #endif
 
 static inline void check_gl_error(const char* message)

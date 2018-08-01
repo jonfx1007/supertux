@@ -1,4 +1,4 @@
-//  SuperTux=
+//  SuperTux
 //  Copyright (C) 2006 Matthias Braun <matze@braunis.de>
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -25,13 +25,12 @@
 
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/format.hpp>
+#include <boost/optional.hpp>
 
 class Config
 {
 public:
   Config();
-  ~Config();
 
   void load();
   void save();
@@ -93,6 +92,8 @@ public:
   bool developer_mode;
   bool christmas_mode;
   bool transitions_enabled;
+  bool confirmation_dialog;
+  bool pause_on_focusloss;
 
   std::string repository_url;
 

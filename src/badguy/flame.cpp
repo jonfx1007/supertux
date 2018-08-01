@@ -16,15 +16,12 @@
 
 #include "badguy/flame.hpp"
 
-#include <math.h>
-
 #include "audio/sound_manager.hpp"
+#include "audio/sound_source.hpp"
 #include "editor/editor.hpp"
-#include "math/random_generator.hpp"
-#include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
+#include "math/util.hpp"
 #include "object/sprite_particle.hpp"
-#include "supertux/object_factory.hpp"
+#include "sprite/sprite.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 
@@ -41,8 +38,8 @@ Flame::Flame(const ReaderMapping& reader) :
   reader.get("radius", radius, 100);
   reader.get("speed", speed, 2);
   if (!Editor::is_active()) {
-    bbox.set_pos(Vector(start_position.x + cos(angle) * radius,
-                        start_position.y + sin(angle) * radius));
+    bbox.set_pos(Vector(start_position.x + cosf(angle) * radius,
+                        start_position.y + sinf(angle) * radius));
   }
   countMe = false;
   SoundManager::current()->preload(FLAME_SOUND);
@@ -66,10 +63,10 @@ Flame::get_settings() {
 void
 Flame::active_update(float elapsed_time)
 {
-  angle = fmodf(angle + elapsed_time * speed, (float) (2*M_PI));
+  angle = fmodf(angle + elapsed_time * speed, math::TAU);
   if (!Editor::is_active()) {
-    Vector newpos(start_position.x + cos(angle) * radius,
-                  start_position.y + sin(angle) * radius);
+    Vector newpos(start_position.x + cosf(angle) * radius,
+                  start_position.y + sinf(angle) * radius);
     movement = newpos - get_pos();
     sound_source->set_position(get_pos());
   }

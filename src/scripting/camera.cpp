@@ -24,9 +24,6 @@ Camera::Camera(::Camera* camera_)
   : camera(camera_)
 { }
 
-Camera::~Camera()
-{ }
-
 void
 Camera::reload_config()
 {
@@ -48,9 +45,9 @@ void
 Camera::set_mode(const std::string& mode)
 {
   if(mode == "normal") {
-    camera->mode = ::Camera::NORMAL;
+    camera->set_mode(::Camera::NORMAL);
   } else if(mode == "manual") {
-    camera->mode = ::Camera::MANUAL;
+    camera->set_mode(::Camera::MANUAL);
   } else {
     log_fatal << "Camera mode '" << mode << "' unknown.";
   }

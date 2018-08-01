@@ -18,36 +18,33 @@
 
 #include "editor/editor.hpp"
 #include "object/camera.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
-
-#include <stdexcept>
+#include "util/writer.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 Gradient::Gradient() :
   ExposedObject<Gradient, scripting::Gradient>(this),
   layer(LAYER_BACKGROUND0),
   gradient_top(),
   gradient_bottom(),
-  gradient_direction(),
-  gradient_region(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+  gradient_direction()
 {
 }
 
 Gradient::Gradient(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<Gradient, scripting::Gradient>(this),
   layer(LAYER_BACKGROUND0),
   gradient_top(),
   gradient_bottom(),
-  gradient_direction(),
-  gradient_region(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+  gradient_direction()
 {
   layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND0);
   std::vector<float> bkgd_top_color, bkgd_bottom_color;
   std::string direction;
-  reader.get("name", name, "");
   if(reader.get("direction", direction))
   {
     if(direction == "horizontal")
@@ -89,7 +86,7 @@ Gradient::Gradient(const ReaderMapping& reader) :
   if (reader.get("top_color", bkgd_top_color)) {
     gradient_top = Color(bkgd_top_color);
   } else {
-    gradient_top = Color(0.3, 0.4, 0.75);
+    gradient_top = Color(0.3f, 0.4f, 0.75f);
   }
 
   if (reader.get("bottom_color", bkgd_bottom_color)) {
@@ -180,6 +177,10 @@ Gradient::set_direction(const GradientDirection& direction)
 void
 Gradient::draw(DrawingContext& context)
 {
+  if(Editor::is_active() && !EditorInputCenter::render_background)
+    return;
+
+  Rectf gradient_region;
   if(gradient_direction != HORIZONTAL && gradient_direction != VERTICAL)
   {
       auto current_sector = Sector::current();
@@ -188,21 +189,21 @@ Gradient::draw(DrawingContext& context)
       auto sector_height = current_sector->get_height();
       gradient_region = Rectf(-camera_translation.x, -camera_translation.y, sector_width, sector_height);
   }
+  else
+  {
+    gradient_region = Rectf(0, 0,
+                            static_cast<float>(context.get_width()),
+                            static_cast<float>(context.get_height()));
+  }
 
   context.push_transform();
   context.set_translation(Vector(0, 0));
-  context.draw_gradient(gradient_top, gradient_bottom, layer, gradient_direction, gradient_region);
+  context.color().draw_gradient(gradient_top, gradient_bottom, layer, gradient_direction, gradient_region);
   context.pop_transform();
 }
 
-void
-Gradient::on_window_resize()
-{
-  gradient_region = Rectf(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-}
-
 bool
-Gradient::do_save() const {
+Gradient::is_saveable() const {
   return !Editor::is_active() || !Editor::current()->get_worldmap_mode();
 }
 

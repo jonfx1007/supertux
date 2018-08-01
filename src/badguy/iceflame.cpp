@@ -19,13 +19,12 @@
 #include <math.h>
 
 #include "audio/sound_manager.hpp"
-#include "math/random_generator.hpp"
+#include "audio/sound_source.hpp"
+#include "math/util.hpp"
+#include "object/sprite_particle.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "object/sprite_particle.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/reader_mapping.hpp"
 
 Iceflame::Iceflame(const ReaderMapping& reader) :
   Flame(reader)
@@ -38,7 +37,7 @@ void
 Iceflame::active_update(float elapsed_time)
 {
   Flame::active_update(elapsed_time);
-  sprite->set_angle(angle * 360.0f / (2*M_PI) * 3);
+  sprite->set_angle(angle * 360.0f / math::TAU * 3.0f);
 }
 
 void

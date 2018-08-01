@@ -16,31 +16,14 @@
 
 #include "video/gl/gl_lightmap.hpp"
 
-#include <SDL_image.h>
-#include <algorithm>
-#include <assert.h>
-#include <functional>
-#include <iomanip>
 #include <iostream>
-#include <math.h>
-#include <physfs.h>
-#include <sstream>
 
-#include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
-#include "util/obstackpp.hpp"
-#include "video/drawing_context.hpp"
 #include "video/drawing_request.hpp"
-#include "video/font.hpp"
 #include "video/gl/gl_painter.hpp"
-#include "video/gl/gl_renderer.hpp"
-#include "video/gl/gl_surface_data.hpp"
 #include "video/gl/gl_texture.hpp"
+#include "video/gl/gl_video_system.hpp"
 #include "video/glutil.hpp"
-#include "video/lightmap.hpp"
-#include "video/renderer.hpp"
-#include "video/surface.hpp"
-#include "video/texture_manager.hpp"
 
 inline int next_po2(int val)
 {
@@ -51,23 +34,15 @@ inline int next_po2(int val)
   return result;
 }
 
-GLLightmap::GLLightmap() :
+GLLightmap::GLLightmap(GLVideoSystem& video_system) :
+  m_video_system(video_system),
+  m_painter(m_video_system),
   m_lightmap(),
   m_lightmap_width(),
   m_lightmap_height(),
   m_lightmap_uv_right(),
   m_lightmap_uv_bottom()
 {
-  m_lightmap_width = SCREEN_WIDTH / s_LIGHTMAP_DIV;
-  m_lightmap_height = SCREEN_HEIGHT / s_LIGHTMAP_DIV;
-  unsigned int width = next_po2(m_lightmap_width);
-  unsigned int height = next_po2(m_lightmap_height);
-
-  m_lightmap.reset(new GLTexture(width, height));
-
-  m_lightmap_uv_right = static_cast<float>(m_lightmap_width) / static_cast<float>(width);
-  m_lightmap_uv_bottom = static_cast<float>(m_lightmap_height) / static_cast<float>(height);
-  TextureManager::current()->register_texture(m_lightmap.get());
 }
 
 GLLightmap::~GLLightmap()
@@ -75,66 +50,80 @@ GLLightmap::~GLLightmap()
 }
 
 void
-GLLightmap::start_draw(const Color &ambient_color)
+GLLightmap::start_draw()
 {
+  if (!m_lightmap)
+  {
+    auto window_size = m_video_system.get_window_size();
 
-  glGetFloatv(GL_VIEWPORT, m_old_viewport); //save viewport
-  glViewport(m_old_viewport[0], m_old_viewport[3] - m_lightmap_height + m_old_viewport[1], m_lightmap_width, m_lightmap_height);
+    m_lightmap_width = window_size.width / s_LIGHTMAP_DIV;
+    m_lightmap_height = window_size.height / s_LIGHTMAP_DIV;
+
+    unsigned int width = next_po2(m_lightmap_width);
+    unsigned int height = next_po2(m_lightmap_height);
+
+    m_lightmap.reset(new GLTexture(width, height));
+
+    m_lightmap_uv_right = static_cast<float>(m_lightmap_width) / static_cast<float>(width);
+    m_lightmap_uv_bottom = static_cast<float>(m_lightmap_height) / static_cast<float>(height);
+    TextureManager::current()->register_texture(m_lightmap.get());
+  }
+
+  const Viewport& viewport = m_video_system.get_viewport();
+  const Rect& rect = viewport.get_rect();
+
+  glViewport(rect.left,
+             rect.bottom - m_lightmap_height,
+             m_lightmap_width,
+             m_lightmap_height);
+
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-#ifdef GL_VERSION_ES_CM_1_0
-  glOrthof(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1.0, 1.0);
-#else
-  glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1.0, 1.0);
-#endif
+
+  glOrtho(0,
+          viewport.get_screen_width(),
+          viewport.get_screen_height(),
+          0,
+          -1.0, 1.0);
+
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-
-  glClearColor( ambient_color.red, ambient_color.green, ambient_color.blue, 1 );
-  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void
 GLLightmap::end_draw()
 {
-  glDisable(GL_BLEND);
+  const Viewport& viewport = m_video_system.get_viewport();
+  const Rect& rect = viewport.get_rect();
+
   glBindTexture(GL_TEXTURE_2D, m_lightmap->get_handle());
-  glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_old_viewport[0], m_old_viewport[3] - m_lightmap_height + m_old_viewport[1], m_lightmap_width, m_lightmap_height);
-
-  glViewport(m_old_viewport[0], m_old_viewport[1], m_old_viewport[2], m_old_viewport[3]);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-#ifdef GL_VERSION_ES_CM_1_0
-  glOrthof(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1.0, 1.0);
-#else
-  glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1.0, 1.0);
-#endif
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glEnable(GL_BLEND);
-
-  glClearColor(0, 0, 0, 1 );
-  glClear(GL_COLOR_BUFFER_BIT);
+  glCopyTexSubImage2D(GL_TEXTURE_2D,
+                      0, 0,
+                      0, rect.left,
+                      rect.bottom - m_lightmap_height,
+                      m_lightmap_width, m_lightmap_height);
 }
 
 void
-GLLightmap::do_draw()
+GLLightmap::render()
 {
   // multiple the lightmap with the framebuffer
   glBlendFunc(GL_DST_COLOR, GL_ZERO);
 
   glBindTexture(GL_TEXTURE_2D, m_lightmap->get_handle());
 
+  const Viewport& viewport = m_video_system.get_viewport();
+
   float vertices[] = {
     0, 0,
-    float(SCREEN_WIDTH), 0,
-    float(SCREEN_WIDTH), float(SCREEN_HEIGHT),
-    0, float(SCREEN_HEIGHT)
+    static_cast<float>(viewport.get_screen_width()), 0,
+    static_cast<float>(viewport.get_screen_width()), static_cast<float>(viewport.get_screen_height()),
+    0, static_cast<float>(viewport.get_screen_height())
   };
   glVertexPointer(2, GL_FLOAT, 0, vertices);
 
   float uvs[] = {
-    0,                 m_lightmap_uv_bottom,
+    0,                   m_lightmap_uv_bottom,
     m_lightmap_uv_right, m_lightmap_uv_bottom,
     m_lightmap_uv_right, 0,
     0, 0
@@ -147,45 +136,30 @@ GLLightmap::do_draw()
 }
 
 void
-GLLightmap::draw_surface(const DrawingRequest& request)
+GLLightmap::clear(const Color& color)
 {
-  GLPainter::draw_surface(request);
+  glClearColor(color.red, color.green, color.blue, color.alpha);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void
-GLLightmap::draw_surface_part(const DrawingRequest& request)
+GLLightmap::set_clip_rect(const Rect& clip_rect)
 {
-  GLPainter::draw_surface_part(request);
+  auto window_size = m_video_system.get_window_size();
+
+  const Viewport& viewport = m_video_system.get_viewport();
+  glScissor(m_lightmap_width * clip_rect.left / viewport.get_screen_width(),
+            window_size.height - (m_lightmap_height * clip_rect.bottom / viewport.get_screen_height()),
+            m_lightmap_width * clip_rect.get_width() / viewport.get_screen_width(),
+            m_lightmap_height * clip_rect.get_height() / viewport.get_screen_height());
+
+  glEnable(GL_SCISSOR_TEST);
 }
 
 void
-GLLightmap::draw_gradient(const DrawingRequest& request)
+GLLightmap::clear_clip_rect()
 {
-  GLPainter::draw_gradient(request);
-}
-
-void
-GLLightmap::draw_filled_rect(const DrawingRequest& request)
-{
-  GLPainter::draw_filled_rect(request);
-}
-
-void
-GLLightmap::draw_inverse_ellipse(const DrawingRequest& request)
-{
-  GLPainter::draw_inverse_ellipse(request);
-}
-
-void
-GLLightmap::draw_line(const DrawingRequest& request)
-{
-  GLPainter::draw_line(request);
-}
-
-void
-GLLightmap::draw_triangle(const DrawingRequest& request)
-{
-  GLPainter::draw_triangle(request);
+  glDisable(GL_SCISSOR_TEST);
 }
 
 void
@@ -194,14 +168,16 @@ GLLightmap::get_light(const DrawingRequest& request) const
   const GetLightRequest* getlightrequest
     = static_cast<GetLightRequest*>(request.request_data);
 
-  float pixels[3];
-  for( int i = 0; i<3; i++)
-    pixels[i] = 0.0f; //set to black
+  float pixels[3] = { 0.0f, 0.0f, 0.0f };
 
-  float posX = request.pos.x * m_lightmap_width / SCREEN_WIDTH + m_old_viewport[0];
-  float posY = m_old_viewport[3] + m_old_viewport[1] - request.pos.y * m_lightmap_height / SCREEN_HEIGHT;
-  glReadPixels((GLint) posX, (GLint) posY , 1, 1, GL_RGB, GL_FLOAT, pixels);
-  *(getlightrequest->color_ptr) = Color( pixels[0], pixels[1], pixels[2]);
+  const Viewport& viewport = m_video_system.get_viewport();
+  const Rect& rect = viewport.get_rect();
+
+  float posX = request.pos.x * static_cast<float>(m_lightmap_width) / static_cast<float>(viewport.get_screen_width()) + static_cast<float>(rect.left);
+  float posY = static_cast<float>((rect.get_height() * 1.0) + (rect.top * 1.0) - request.pos.y * static_cast<float>(m_lightmap_height) / static_cast<float>(viewport.get_screen_height()));
+
+  glReadPixels(static_cast<GLint>(posX), static_cast<GLint>(posY), 1, 1, GL_RGB, GL_FLOAT, pixels);
+  *(getlightrequest->color_ptr) = Color(pixels[0], pixels[1], pixels[2]);
 }
 
 /* EOF */

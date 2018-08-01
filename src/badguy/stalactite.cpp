@@ -21,7 +21,6 @@
 #include "object/bullet.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 static const int SHAKE_RANGE_X = 40;
@@ -58,7 +57,7 @@ Stalactite::active_update(float elapsed_time)
       }
     }
   } else if(state == STALACTITE_SHAKING) {
-    shake_delta = Vector(graphicsRandom.rand(-3,3), 0);
+    shake_delta = Vector(static_cast<float>(graphicsRandom.rand(-3, 3)), 0.0f);
     if(timer.check()) {
       state = STALACTITE_FALLING;
       physic.enable_gravity(true);
@@ -150,11 +149,11 @@ Stalactite::draw(DrawingContext& context)
     return;
 
   if(state == STALACTITE_SQUISHED) {
-    sprite->draw(context, get_pos(), LAYER_OBJECTS);
+    sprite->draw(context.color(), get_pos(), LAYER_OBJECTS);
   } else if(state == STALACTITE_SHAKING) {
-    sprite->draw(context, get_pos() + shake_delta, layer);
+    sprite->draw(context.color(), get_pos() + shake_delta, layer);
   } else {
-    sprite->draw(context, get_pos(), layer);
+    sprite->draw(context.color(), get_pos(), layer);
   }
 }
 

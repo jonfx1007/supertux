@@ -33,7 +33,6 @@ private:
 
 public:
   WillOWisp(::WillOWisp* parent);
-  ~WillOWisp();
 
 private:
   WillOWisp(const WillOWisp&) = delete;
@@ -53,7 +52,13 @@ public:
    */
   void set_state(const std::string& state);
 
+  /**
+   * Start following the path
+   */
   void start_moving();
+  /**
+   * Stop following the path
+   */
   void stop_moving();
 };
 

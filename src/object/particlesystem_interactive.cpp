@@ -17,12 +17,14 @@
 #include "object/particlesystem_interactive.hpp"
 
 #include "math/aatriangle.hpp"
-#include "math/vector.hpp"
 #include "object/tilemap.hpp"
-#include "supertux/game_object.hpp"
 #include "supertux/collision.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/tile.hpp"
+#include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 //TODO: Find a way to make rain collide with objects like bonus blocks
 //      Add an option to set rain strength
@@ -30,8 +32,8 @@
 ParticleSystem_Interactive::ParticleSystem_Interactive() :
   ParticleSystem()
 {
-  virtual_width = SCREEN_WIDTH;
-  virtual_height = SCREEN_HEIGHT;
+  virtual_width = static_cast<float>(SCREEN_WIDTH);
+  virtual_height = static_cast<float>(SCREEN_HEIGHT);
   z_pos = 0;
 }
 
@@ -47,7 +49,7 @@ void ParticleSystem_Interactive::draw(DrawingContext& context)
   context.push_transform();
 
   for(auto& particle : particles) {
-    context.draw_surface(particle->texture, particle->pos, z_pos);
+    context.color().draw_surface(particle->texture, particle->pos, z_pos);
   }
 
   context.pop_transform();

@@ -23,6 +23,7 @@
 #include "util/reader_mapping.hpp"
 
 Torch::Torch(const ReaderMapping& reader) :
+  MovingObject(reader),
   ExposedObject<Torch, scripting::Torch>(this),
   m_torch(),
   m_flame(SpriteManager::current()->create("images/objects/torch/flame.sprite")),
@@ -34,13 +35,12 @@ Torch::Torch(const ReaderMapping& reader) :
   reader.get("x", bbox.p1.x);
   reader.get("y", bbox.p1.y);
 
-  reader.get("name", name, "");
-
   reader.get("sprite", sprite_name);
   reader.get("burning", m_burning, true);
 
   m_torch = SpriteManager::current()->create(sprite_name);
-  bbox.set_size(m_torch->get_width(), m_torch->get_height());
+  bbox.set_size(static_cast<float>(m_torch->get_width()),
+                static_cast<float>(m_torch->get_height()));
   m_flame_glow->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
   m_flame_light->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
   set_group(COLGROUP_TOUCHABLE);
@@ -51,19 +51,16 @@ Torch::draw(DrawingContext& context)
 {
   if (m_burning)
   {
-    m_flame->draw(context, get_pos(), LAYER_TILES - 1);
+    m_flame->draw(context.color(), get_pos(), LAYER_TILES - 1);
 
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    m_flame_light->draw(context, get_pos(), 0);
-    context.pop_target();
+    m_flame_light->draw(context.light(), get_pos(), 0);
   }
 
-  m_torch->draw(context, get_pos(), LAYER_TILES - 1);
+  m_torch->draw(context.color(), get_pos(), LAYER_TILES - 1);
 
   if (m_burning)
   {
-    m_flame_glow->draw(context, get_pos(), LAYER_TILES - 1);
+    m_flame_glow->draw(context.color(), get_pos(), LAYER_TILES - 1);
   }
 }
 
@@ -109,8 +106,7 @@ Torch::get_burning() const
 void
 Torch::set_burning(bool burning_)
 {
-  if (this->m_burning == burning_) { return; }
-  this->m_burning = burning_;
+  m_burning = burning_;
 }
 
 /* EOF */

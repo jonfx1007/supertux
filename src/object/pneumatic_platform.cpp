@@ -18,7 +18,6 @@
 
 #include "object/player.hpp"
 #include "object/portable.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 PneumaticPlatform::PneumaticPlatform(const ReaderMapping& reader) :
@@ -97,11 +96,11 @@ PneumaticPlatform::update(float elapsed_time)
     movement = Vector(0, (start_y + offset_y) - get_pos().y);
   }
   if (this == master) {
-    int contact_diff = contacts.size() - slave->contacts.size();
+    size_t contact_diff = contacts.size() - slave->contacts.size();
     contacts.clear();
     slave->contacts.clear();
 
-    speed_y += ((float)contact_diff * elapsed_time) * 12.8f;
+    speed_y += (static_cast<float>(contact_diff) * elapsed_time) * 12.8f;
     speed_y -= (offset_y * elapsed_time * 0.05f);
     speed_y *= 1 - elapsed_time;
     offset_y += speed_y * elapsed_time * Sector::current()->get_gravity();

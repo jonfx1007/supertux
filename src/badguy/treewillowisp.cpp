@@ -16,14 +16,15 @@
 
 #include "badguy/treewillowisp.hpp"
 
+#include <math.h>
+
 #include "audio/sound_manager.hpp"
 #include "audio/sound_source.hpp"
 #include "badguy/ghosttree.hpp"
+#include "math/util.hpp"
 #include "object/lantern.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
-
-#include <math.h>
 
 static const std::string TREEWILLOSOUND = "sounds/willowisp.wav";
 
@@ -72,7 +73,7 @@ void
 TreeWillOWisp::start_sucking(const Vector& suck_target_)
 {
   mystate = STATE_SUCKED;
-  this->suck_target = suck_target_;
+  suck_target = suck_target_;
   was_sucked = true;
 }
 
@@ -98,14 +99,9 @@ TreeWillOWisp::collides(GameObject& other, const CollisionHit& ) const
 void
 TreeWillOWisp::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), layer);
+  sprite->draw(context.color(), get_pos(), layer);
 
-  context.push_target();
-  context.set_target(DrawingContext::LIGHTMAP);
-
-  sprite->draw(context, get_pos(), layer);
-
-  context.pop_target();
+  sprite->draw(context.light(), get_pos(), layer);
 }
 
 void
@@ -131,10 +127,10 @@ TreeWillOWisp::active_update(float elapsed_time)
     return;
   }
 
-  angle = fmodf(angle + elapsed_time * speed, (float) (2*M_PI));
-  Vector newpos(start_position + Vector(sin(angle) * radius, 0));
+  angle = fmodf(angle + elapsed_time * speed, math::TAU);
+  Vector newpos(start_position + Vector(sinf(angle) * radius, 0));
   movement = newpos - get_pos();
-  float sizemod = cos(angle) * 0.8f;
+  float sizemod = cosf(angle) * 0.8f;
   /* TODO: modify sprite size */
 
   sound_source->set_position(get_pos());
@@ -149,7 +145,7 @@ TreeWillOWisp::active_update(float elapsed_time)
 void
 TreeWillOWisp::set_color(const Color& color_)
 {
-  this->color = color_;
+  color = color_;
   sprite->set_color(color_);
 }
 

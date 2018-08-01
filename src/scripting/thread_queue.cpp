@@ -28,10 +28,6 @@ ThreadQueue::ThreadQueue() :
 {
 }
 
-ThreadQueue::~ThreadQueue()
-{
-}
-
 void
 ThreadQueue::add(HSQUIRRELVM vm)
 {
@@ -58,7 +54,7 @@ ThreadQueue::wakeup()
   // robust for scripts that add new entries to the list while we're traversing
   // it
   size_t i = threads.size() - 1;
-  size_t end = (size_t) 0 - 1;
+  size_t end = static_cast<size_t>(0 - 1);
   size_t size_begin = threads.size();
   while(i != end) {
     HSQOBJECT object = threads[i];
